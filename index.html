@@ -1,0 +1,1201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="World Passport: a travel game about cultures around the world for 8th grade Global Studies.">
+<title>World Passport</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500&display=swap">
+<style>
+/* Layout: a night terminal. Departures-board header → globe hero + boarding-pass grid → glass flight-deck panel per destination → holographic certificate. Deliberately single dark look. */
+:root{
+  color-scheme:dark;
+  --night:#060914; --night-2:#0c1226; --card:#0b1122; --panel:rgba(14,21,44,.78); --panel-2:#111a36;
+  --ink:#eef1ff; --muted:#97a3cb; --amber:#ffc23d; --cyan:#53e3ff; --gold:#ffd66b; --navy-ink:#f4e7c0;
+  --ok:#4ee39a; --bad:#ff5d73; --line:rgba(147,160,200,.22); --paper:#f4ecda; --paper-ink:#1d2133;
+  --f-display:"Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  --f-hand:"Caveat", "Segoe Print", "Comic Sans MS", cursive;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background-color:var(--night);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55;
+  background-image:radial-gradient(1200px 600px at 12% -10%, rgba(90,95,255,.24), transparent 60%),
+    radial-gradient(900px 520px at 100% 110%, rgba(83,227,255,.15), transparent 60%),
+    linear-gradient(rgba(147,160,200,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(147,160,200,.05) 1px, transparent 1px);
+  background-size:auto,auto,48px 48px,48px 48px;background-attachment:fixed}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:18px 64px}
+h1,h2,h3{font-family:var(--f-display);font-weight:800;text-wrap:balance;margin:0;line-height:1.05;letter-spacing:.02em}
+h2,h3{text-transform:uppercase}
+.mono{font-family:var(--f-mono)}
+.label{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+
+/* split-flap letters */
+.flap{display:inline-flex;flex-wrap:wrap;gap:.16em .34em}
+.flap .w{display:inline-flex;gap:.06em}
+.ch{display:inline-block;min-width:.68em;text-align:center;color:var(--amber);border-radius:.09em;padding:.03em .07em;position:relative;
+  background:linear-gradient(#18213f 0 50%, #10173a 50%);box-shadow:0 2px 0 rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.05);
+  text-shadow:0 0 14px rgba(255,194,61,.45)}
+.ch::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.6)}
+.ch.spin{color:var(--ink);text-shadow:none}
+
+/* top bar */
+.bar{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding:12px 16px;margin-bottom:26px;
+  background:rgba(6,9,20,.72);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(10px)}
+.brand{display:flex;gap:12px;align-items:center;min-width:0}
+.logo{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--amber);color:#1a1200;box-shadow:0 0 18px rgba(255,194,61,.5)}
+.logo svg{width:22px;height:22px;fill:currentColor;transform:rotate(45deg)}
+.bar .who{font-family:var(--f-display);font-weight:800;font-size:1.45rem;text-transform:uppercase;letter-spacing:.05em;line-height:1.1}
+.stats{display:flex;gap:16px;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column;gap:3px}
+.stat b{font-family:var(--f-mono);font-weight:600;font-size:1rem;font-variant-numeric:tabular-nums;color:var(--amber);background:#0a0f1f;
+  border:1px solid var(--line);border-radius:6px;padding:2px 9px;text-shadow:0 0 10px rgba(255,194,61,.45)}
+
+/* buttons */
+.btn{background:var(--amber);color:#1a1200;border:0;border-radius:999px;padding:12px 26px;font-family:var(--f-display);font-weight:800;font-size:1.15rem;
+  letter-spacing:.08em;text-transform:uppercase;transition:box-shadow .2s, transform .15s}
+.btn:hover:not([disabled]){box-shadow:0 0 26px rgba(255,194,61,.6);transform:translateY(-1px)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--cyan);border:1.5px solid rgba(83,227,255,.55)}
+.btn.ghost:hover{box-shadow:0 0 20px rgba(83,227,255,.35)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* globe */
+.globe-wrap{width:100%;max-width:460px;aspect-ratio:1/1}
+.globe{width:100%;height:100%;display:block}
+
+/* cover */
+.cover-stage{display:grid;grid-template-columns:1fr;gap:0;align-items:center;justify-items:center;margin-top:1vh}
+@media (min-width:820px){.cover-stage{grid-template-columns:1.1fr 1fr;gap:20px}}
+@media (max-width:819px){.cover-stage .globe-wrap{max-width:300px;margin-bottom:-50px}}
+.cover{width:100%;max-width:440px;position:relative;overflow:hidden;color:var(--navy-ink);text-align:center;display:grid;gap:16px;
+  background:linear-gradient(155deg,#1d2c62,#0d1638 58%,#1d1046);border-radius:14px 26px 26px 14px;padding:40px 30px 32px;
+  box-shadow:inset 12px 0 0 rgba(0,0,0,.3),0 30px 80px rgba(0,0,0,.65),0 0 0 1px rgba(255,214,107,.28)}
+.cover::before{content:"";position:absolute;inset:-60%;pointer-events:none;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.10) 47%,rgba(83,227,255,.14) 50%,rgba(255,120,210,.12) 53%,transparent 58%);
+  animation:sheen 7s ease-in-out infinite alternate}
+@keyframes sheen{from{transform:translateX(-25%)}to{transform:translateX(25%)}}
+.cover>*{position:relative}
+.cover .crest{width:92px;height:92px;margin:0 auto;color:var(--gold);filter:drop-shadow(0 0 10px rgba(255,214,107,.5))}
+.cover h1{font-size:clamp(3rem,12vw,4.2rem);font-weight:900;line-height:.9;text-transform:uppercase;color:transparent;
+  background:linear-gradient(100deg,#b8862b,#ffe7a0 25%,#c99a3a 45%,#fff3c8 65%,#b8862b 85%);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;animation:foil 6s linear infinite}
+@keyframes foil{to{background-position:-200% 0}}
+.cover .sub{font-family:var(--f-mono);letter-spacing:.28em;font-size:.72rem;color:var(--gold)}
+.cover p{margin:0;font-size:1rem;opacity:.9}
+.cover input{width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid rgba(255,214,107,.6);background:rgba(0,0,0,.28);
+  color:var(--navy-ink);font:inherit;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.08em}
+.cover input::placeholder{color:var(--navy-ink);opacity:.45}
+.cover .fine{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.7}
+
+/* map hero */
+.hero{display:grid;grid-template-columns:1fr;gap:6px;align-items:center;margin-bottom:26px}
+@media (min-width:760px){.hero{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:28px}}
+.hero .globe-wrap{max-width:400px;margin:0 auto}
+.intro{display:grid;gap:12px;min-width:0}
+.intro h2{font-size:clamp(1.9rem,5.5vw,3rem)}
+.intro p{margin:0;color:var(--muted);max-width:56ch}
+.intro .label{color:var(--cyan)}
+.legend{display:flex;gap:8px 18px;flex-wrap:wrap;font-size:.88rem;color:var(--muted)}
+.pin{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid var(--ink);margin-right:7px;vertical-align:-1px}
+.pin.on{background:var(--amber);border-color:var(--amber);box-shadow:0 0 8px var(--amber)}
+.pin.home{background:var(--cyan);border-color:var(--cyan)}
+
+/* boarding passes */
+.visas{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.visa{display:grid;grid-template-columns:minmax(0,1fr) 104px;text-align:left;padding:0;border:0;background:none;color:var(--ink);
+  filter:drop-shadow(0 12px 22px rgba(0,0,0,.5));transition:transform .2s}
+.visa:hover:not(.done){transform:translateY(-4px) rotate(-.5deg)}
+.pass-main{background:linear-gradient(160deg,#17234d,#0e1632);border-radius:14px 0 0 14px;padding:14px 16px;display:grid;gap:6px;
+  border:1px solid var(--line);border-right:0;border-top:3px solid var(--dc);min-width:0}
+.pass-stub{background:linear-gradient(160deg,#1b2856,#101939);border-radius:0 14px 14px 0;border:1px solid var(--line);border-left:2px dashed rgba(147,160,200,.4);
+  border-top:3px solid var(--dc);display:grid;grid-template-rows:1fr auto;place-items:center;padding:10px 8px;gap:8px;position:relative}
+.pass-stub::before,.pass-stub::after{content:"";position:absolute;left:-11px;width:20px;height:20px;border-radius:50%;background:var(--night)}
+.pass-stub::before{top:-12px}.pass-stub::after{bottom:-11px}
+.pass-top{display:flex;justify-content:space-between;gap:8px;font-family:var(--f-mono);font-size:.72rem;color:var(--cyan);letter-spacing:.1em}
+.visa .region{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.visa h3{font-size:1.85rem;line-height:1;color:var(--ink)}
+.visa .teaser{font-size:.9rem;color:var(--muted)}
+.pass-meta{display:flex;gap:16px;margin-top:4px;flex-wrap:wrap}
+.pass-meta b{display:block;font-family:var(--f-mono);font-size:.8rem;font-weight:600}
+.board{color:var(--amber)} .landed{color:var(--ok)}
+.slot{width:84px;height:84px;border:1.5px dashed rgba(147,160,200,.45);border-radius:50%;display:grid;place-items:center;
+  font-family:var(--f-mono);font-size:.6rem;color:var(--muted);letter-spacing:.1em}
+.visa.done .slot{border:0}
+.visa.done{cursor:default}
+.visa.done .pass-main{opacity:.85}
+.barcode{width:78px;height:26px;opacity:.65;background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px,var(--ink) 4px 5px,transparent 5px 8px,var(--ink) 8px 11px,transparent 11px 12px)}
+.final-card{margin-top:26px;border-radius:16px;padding:22px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  background:linear-gradient(120deg,rgba(255,194,61,.15),rgba(83,227,255,.10));border:1px solid rgba(255,194,61,.45)}
+.final-card h3{color:var(--amber);font-size:2rem}
+
+/* flight-deck panel */
+.doc{background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,4vw,34px);
+  display:grid;gap:22px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.doc::before{content:"";position:absolute;left:28px;right:28px;top:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--amber),var(--cyan),transparent)}
+.doc-head{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:16px}
+.doc-head h2{font-size:clamp(1.6rem,5vw,2.5rem);margin-top:6px}
+.doc-head .label{color:var(--cyan)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.steps span{font-family:var(--f-mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.steps span.on{background:var(--amber);color:#1a1200;border-color:var(--amber);box-shadow:0 0 14px rgba(255,194,61,.5)}
+.steps span.past{color:var(--ok);border-color:rgba(78,227,154,.5)}
+.phrase{display:flex;gap:8px 18px;align-items:baseline;flex-wrap:wrap;border-radius:14px;padding:16px 18px;
+  background:linear-gradient(90deg,rgba(255,194,61,.13),rgba(83,227,255,.06));border:1px solid rgba(255,194,61,.32)}
+.phrase .say{font-family:var(--f-display);font-weight:800;font-size:2.4rem;line-height:1;color:var(--amber);text-shadow:0 0 20px rgba(255,194,61,.5)}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.note{min-width:0;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.note h3{font-size:1.3rem;color:var(--cyan);letter-spacing:.06em;margin-bottom:4px}
+.note p{margin:0;max-width:65ch}
+.lead{font-size:1.1rem;max-width:65ch;margin:0}
+
+/* questions */
+.q{display:grid;gap:14px}
+.q .prompt{font-family:var(--f-display);font-weight:700;font-size:clamp(1.55rem,4vw,2.1rem);line-height:1.12;max-width:34ch;letter-spacing:.01em}
+.opts{display:grid;gap:10px}
+.opt{text-align:left;background:rgba(255,255,255,.035);border:1.5px solid var(--line);border-radius:14px;padding:13px 16px;display:flex;gap:14px;align-items:center;
+  color:var(--ink);transition:border-color .15s, box-shadow .15s, transform .15s}
+.opt:hover:not([disabled]){border-color:var(--cyan);box-shadow:0 0 20px rgba(83,227,255,.22);transform:translateX(3px)}
+.opt .k{flex:none;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:#0a0f1f;color:var(--amber);border:1px solid var(--line);font-family:var(--f-mono);font-weight:600}
+.opt.right{border-color:var(--ok);background:rgba(78,227,154,.12);box-shadow:0 0 24px rgba(78,227,154,.25)}
+.opt.right .k{background:var(--ok);color:#03210f;border-color:var(--ok)}
+.opt.wrong{border-color:var(--bad);background:rgba(255,93,115,.12)}
+.opt.wrong .k{background:var(--bad);color:#2a0508;border-color:var(--bad)}
+.opt[disabled]{cursor:default}
+.why{border-left:3px solid var(--amber);padding:12px 16px;background:rgba(255,194,61,.07);border-radius:0 12px 12px 0;max-width:70ch}
+.why b{font-family:var(--f-mono);font-size:.76rem;letter-spacing:.14em;text-transform:uppercase}
+.why.ok{border-color:var(--ok)} .why.ok b{color:var(--ok)}
+.why.no{border-color:var(--bad)} .why.no b{color:var(--bad)}
+.counter{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);letter-spacing:.04em}
+
+/* match */
+.match{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.match{grid-template-columns:1fr}}
+.col{display:grid;gap:10px;align-content:start;min-width:0}
+.tile{background:rgba(255,255,255,.035);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;color:var(--ink);transition:border-color .15s, box-shadow .15s}
+.tile:hover:not([disabled]){border-color:var(--cyan)}
+.tile.term{font-family:var(--f-display);font-weight:800;font-size:1.35rem;letter-spacing:.03em;color:var(--amber)}
+.tile.sel{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(83,227,255,.3),0 0 22px rgba(83,227,255,.3)}
+.tile.locked{border-color:var(--ok);background:rgba(78,227,154,.12);cursor:default}
+.tile.term.locked{color:var(--ok)}
+.tile.shake{animation:shake .35s;border-color:var(--bad)}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+/* postcard (light paper on purpose) */
+.postcard{display:grid;grid-template-columns:1fr 160px;gap:18px;background:var(--paper);color:var(--paper-ink);padding:18px;transform:rotate(-.5deg);
+  border:10px solid transparent;border-image:repeating-linear-gradient(45deg,#d8394a 0 12px,var(--paper) 12px 20px,#2b5fb8 20px 32px,var(--paper) 32px 40px) 10;
+  box-shadow:0 20px 40px rgba(0,0,0,.45)}
+@media (max-width:560px){.postcard{grid-template-columns:1fr}}
+.postcard textarea{width:100%;min-height:150px;resize:vertical;border:0;color:var(--paper-ink);padding:0 4px;
+  background:repeating-linear-gradient(transparent 0 35px, rgba(29,33,51,.2) 35px 36px);line-height:36px;font-family:var(--f-hand);font-size:1.6rem}
+.postcard textarea::placeholder{color:rgba(29,33,51,.45)}
+.postcard textarea:focus-visible{outline-color:#2b5fb8}
+.postcard .side{border-left:1px dashed rgba(29,33,51,.35);padding-left:16px;display:grid;gap:6px;align-content:start}
+.postcard .side .label{color:#666b7c}
+.postcard .side .mono{font-size:.85rem}
+@media (max-width:560px){.postcard .side{border-left:0;padding-left:0}}
+
+/* stamps */
+.stamp{filter:drop-shadow(0 0 5px currentColor)}
+.stamp.holo{animation:holo 4s linear infinite}
+@keyframes holo{from{filter:drop-shadow(0 0 7px currentColor) hue-rotate(0deg)}to{filter:drop-shadow(0 0 7px currentColor) hue-rotate(360deg)}}
+.reveal{display:grid;place-items:center;gap:16px;text-align:center;padding:24px 0;background:radial-gradient(circle at 50% 32%, rgba(255,194,61,.16), transparent 55%)}
+.reveal svg{width:min(260px,70vw);height:auto}
+.reveal h2{font-size:clamp(2rem,6vw,3rem)}
+.thump{animation:thump .55s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes thump{0%{transform:scale(2.4) rotate(-16deg);opacity:0}100%{transform:scale(1) rotate(-8deg);opacity:1}}
+
+/* overlays */
+.overlay{position:fixed;inset:0;background:rgba(3,5,12,.75);backdrop-filter:blur(6px);display:grid;place-items:center;z-index:20;
+  padding:max(16px, env(safe-area-inset-top,0px)) max(16px, env(safe-area-inset-right,0px)) max(16px, env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px))}
+.overlay .doc{max-height:85vh;overflow:auto;max-width:860px;width:100%;background:var(--panel-2)}
+.boarding{position:fixed;inset:0;z-index:30;display:grid;place-items:center;cursor:pointer;animation:fadein .25s both;
+  background:radial-gradient(circle at 50% 40%, #142049, #04060e 70%);
+  padding:max(16px, env(safe-area-inset-top,0px)) max(16px, env(safe-area-inset-right,0px)) max(16px, env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px))}
+.boarding.out{opacity:0;transition:opacity .3s}
+@keyframes fadein{from{opacity:0}}
+.board-card{width:min(600px,100%);display:grid;gap:20px;text-align:center;justify-items:center}
+.board-card .label{color:var(--cyan)}
+.route{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px}
+.route b{display:block;font-family:var(--f-display);font-weight:900;font-size:clamp(2.2rem,9vw,3.6rem);color:var(--amber);line-height:1;text-shadow:0 0 22px rgba(255,194,61,.5)}
+.route span{font-family:var(--f-mono);font-size:.7rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.arc{width:100%;height:auto;overflow:visible}
+.arc .trail{fill:none;stroke:var(--cyan);stroke-width:2;stroke-dasharray:4 6;opacity:.75}
+.arc .plane{fill:var(--ink)}
+.board-card h2{font-size:clamp(1.8rem,7vw,3.2rem)}
+
+/* certificate */
+@property --a{syntax:"<angle>";inherits:false;initial-value:0deg}
+.cert{border-radius:22px;padding:clamp(18px,4vw,36px);display:grid;gap:24px;border:2px solid transparent;
+  background:linear-gradient(var(--panel-2),var(--panel-2)) padding-box, conic-gradient(from var(--a), #ffd66b,#53e3ff,#ff7ad9,#7ee07a,#ffd66b) border-box;
+  animation:spinborder 6s linear infinite;box-shadow:0 30px 90px rgba(0,0,0,.55)}
+@keyframes spinborder{to{--a:360deg}}
+.cert .doc-head{border-color:var(--line)}
+.cert h2{font-size:clamp(2rem,7vw,3.4rem)}
+.cert .stat b{font-size:1.1rem}
+.cert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+.cert-grid svg{width:100%;height:auto}
+.mrz{font-family:var(--f-mono);font-size:clamp(.6rem,2.2vw,.95rem);letter-spacing:.12em;background:#03050c;color:var(--amber);padding:14px;border-radius:10px;
+  overflow-x:auto;white-space:pre;border:1px solid var(--line);text-shadow:0 0 8px rgba(255,194,61,.4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.pc{background:var(--paper);color:var(--paper-ink);border-radius:4px;padding:12px 14px;font-family:var(--f-hand);font-size:1.35rem;line-height:1.25;min-width:0;overflow-wrap:anywhere}
+.pc .label{color:#666b7c;margin-bottom:4px}
+.pc:nth-child(odd){transform:rotate(-.6deg)} .pc:nth-child(even){transform:rotate(.5deg)}
+table.tally{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.tally td,.tally th{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+.tally th{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:400}
+.tally td.n{text-align:right;font-family:var(--f-mono);color:var(--amber)}
+.tblwrap{overflow-x:auto}
+
+@media (prefers-reduced-motion: reduce){
+  .cover::before,.cover h1,.stamp.holo,.cert,.thump,.tile.shake,.boarding{animation:none}
+  .visa,.opt,.btn{transition:none}
+}
+/* polish pass */
+.snd{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 12px;font-family:var(--f-mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;align-self:end}
+.snd[aria-pressed="true"]{color:var(--cyan);border-color:rgba(83,227,255,.5)}
+.btn.small{font-size:.92rem;padding:8px 16px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 16px);z-index:40;background:var(--amber);color:#1a1200;font-family:var(--f-display);font-weight:800;
+  font-size:1.15rem;letter-spacing:.06em;text-transform:uppercase;padding:10px 20px;border-radius:999px;box-shadow:0 0 34px rgba(255,194,61,.6);
+  animation:toast 1.9s ease both;pointer-events:none;white-space:nowrap}
+.toast small{font-family:var(--f-mono);font-size:.8rem;font-weight:600;margin-left:8px}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,-12px)}12%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-8px)}}
+.confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:35}
+.fact{border:1px dashed rgba(255,194,61,.5);border-radius:14px;padding:12px 18px;max-width:52ch;background:rgba(255,194,61,.06);text-align:left}
+.fact p{margin:4px 0 0}
+.fact .label{color:var(--amber)}
+.elements{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.el{padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);min-width:0}
+.el h3{color:var(--cyan);font-size:1.35rem}
+.el p{margin:2px 0 0}
+.code{border:1px solid rgba(255,194,61,.38);border-radius:14px;padding:14px 18px;background:rgba(255,194,61,.06)}
+.code .label{color:var(--amber)}
+.code ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:8px;max-width:70ch}
+.qtag{color:var(--cyan)}
+@media (prefers-reduced-motion: reduce){.toast{animation:none;transform:translateX(-50%)}}
+/* pass 3 */
+body{margin:0}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+.ticker{overflow:hidden;border:1px solid var(--line);border-radius:10px;background:rgba(3,5,12,.85);margin:-12px 0 24px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.track{display:flex;width:max-content;padding:9px 0;animation:tick 45s linear infinite;font-family:var(--f-mono);font-size:.78rem;letter-spacing:.12em;color:var(--ink)}
+.track span{white-space:nowrap;padding-right:44px}
+.track b{color:var(--amber);font-weight:600}
+.track i{font-style:normal;color:var(--muted)} .track i.ok{color:var(--ok)} .track i.nb{color:var(--cyan);animation:blink 1.1s steps(2) infinite}
+@keyframes tick{to{transform:translateX(-50%)}}
+@keyframes blink{50%{opacity:.25}}
+.pass-main{position:relative;overflow:hidden}
+.pass-main::after{content:"";position:absolute;inset:0;pointer-events:none;transform:translateX(-120%);transition:transform .8s ease;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.13) 45%,rgba(83,227,255,.12) 50%,rgba(255,122,217,.10) 55%,transparent 68%)}
+.visa:hover .pass-main::after{transform:translateX(120%)}
+.visa.next{animation:nextglow 2.2s ease-in-out infinite}
+@keyframes nextglow{0%,100%{filter:drop-shadow(0 12px 22px rgba(0,0,0,.5)) drop-shadow(0 0 0 rgba(255,194,61,0))}50%{filter:drop-shadow(0 12px 22px rgba(0,0,0,.5)) drop-shadow(0 0 14px rgba(255,194,61,.55))}}
+.nextbadge{font-family:var(--f-mono);font-size:.7rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);animation:blink 1.1s steps(2) infinite}
+.doc{--dc:var(--cyan)}
+.doc::before{background:linear-gradient(90deg,transparent,var(--amber),var(--dc),transparent)}
+.note{border-top:2px solid color-mix(in srgb, var(--dc) 70%, transparent)}
+.note h3{color:var(--dc)}
+.doc .phrase{border-color:color-mix(in srgb, var(--dc) 55%, transparent);background:linear-gradient(90deg,color-mix(in srgb, var(--dc) 16%, transparent),rgba(83,227,255,.04))}
+.reveal{background:radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--dc) 24%, transparent), transparent 58%)}
+.doc-head h2 .ch{box-shadow:0 2px 0 rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.05), inset 0 -2px 0 color-mix(in srgb, var(--dc) 60%, transparent)}
+@media (prefers-reduced-motion: reduce){.track,.track i.nb,.nextbadge,.visa.next{animation:none}.pass-main::after{transition:none}}
+/* pass 4: tickets + globe */
+.globe-col{display:grid;justify-items:center;gap:2px;width:100%;min-width:0}
+.globe-hint{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:-18px}
+.globe{user-select:none;-webkit-user-select:none}
+.pass-main{background-color:#0f1733;
+  background-image:linear-gradient(90deg, rgba(13,20,46,.97) 0%, rgba(13,20,46,.9) 50%, rgba(13,20,46,.42) 100%), var(--motif,none), linear-gradient(160deg,#17234d,#0e1632);
+  background-size:auto, var(--msize,auto), auto; background-repeat:no-repeat, var(--mrep,repeat), no-repeat; background-position:0 0, var(--mpos,0 0), 0 0}
+.pass-stub{background:linear-gradient(165deg, color-mix(in srgb, var(--dc) 26%, #17224b), #0e1633 70%)}
+.slot{border-color:color-mix(in srgb, var(--dc) 60%, transparent);color:color-mix(in srgb, var(--dc) 75%, #ffffff)}
+.barcode{background:repeating-linear-gradient(90deg,var(--dc) 0 2px,transparent 2px 4px,var(--ink) 4px 5px,transparent 5px 8px,var(--dc) 8px 11px,transparent 11px 12px)}
+.visa .hello{font-family:var(--f-display);font-weight:700;font-size:1.05rem;letter-spacing:.03em;color:var(--dc)}
+.motif-name{font-family:var(--f-mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb, var(--dc) 70%, var(--muted));
+  border-top:1px dashed var(--line);padding-top:7px;margin-top:4px}
+.visa h3{text-shadow:0 0 22px color-mix(in srgb, var(--dc) 45%, transparent)}
+.doc .phrase{background-color:rgba(14,21,44,.6);
+  background-image:linear-gradient(90deg, rgba(12,18,42,.95) 0%, rgba(12,18,42,.75) 55%, rgba(12,18,42,.2) 100%), var(--motif,none);
+  background-size:auto, var(--msize,auto); background-repeat:no-repeat, var(--mrep,repeat); background-position:0 0, var(--mpos,0 0)}
+/* pass 5: final polish */
+@keyframes holo{0%,100%{filter:drop-shadow(0 0 4px currentColor) drop-shadow(0 0 1px #ffd66b)}50%{filter:drop-shadow(0 0 11px currentColor) drop-shadow(0 0 7px #ffd66b) brightness(1.18)}}
+.stamp.holo{animation:holo 3.2s ease-in-out infinite}
+.cert-grid{grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px 10px;padding:6px 4px}
+.cert-grid svg:nth-child(3n+1){transform:rotate(-7deg)} .cert-grid svg:nth-child(3n+2){transform:rotate(4deg)} .cert-grid svg:nth-child(3n){transform:rotate(-2deg)}
+.cert-grid svg:nth-child(2){animation-delay:-.4s}.cert-grid svg:nth-child(3){animation-delay:-.8s}.cert-grid svg:nth-child(4){animation-delay:-1.2s}.cert-grid svg:nth-child(5){animation-delay:-1.6s}
+.cert-grid svg:nth-child(6){animation-delay:-2s}.cert-grid svg:nth-child(7){animation-delay:-2.4s}.cert-grid svg:nth-child(8){animation-delay:-2.8s}.cert-grid svg:nth-child(9){animation-delay:-3.2s}
+.sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:10px;vertical-align:1px;box-shadow:0 0 8px currentColor}
+@media (min-width:820px){.cover-stage{min-height:calc(100vh - 70px)}}
+#app.enter > *{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+#app.enter > *:nth-child(2){animation-delay:.05s} #app.enter > *:nth-child(3){animation-delay:.1s} #app.enter > *:nth-child(4){animation-delay:.15s} #app.enter > *:nth-child(5){animation-delay:.2s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+.opt.right{animation:pop .4s ease} .opt.wrong{animation:shake .35s}
+@keyframes pop{40%{transform:scale(1.015)}}
+.postcard textarea{outline:none}
+.postcard textarea:focus-visible{outline:none;box-shadow:inset 0 -2px 0 #2b5fb8}
+.postage{position:relative;width:92px;height:106px;padding:6px;background:var(--dc);color:#141414;display:grid;align-content:center;justify-items:center;gap:4px;text-align:center;
+  outline:4px dotted var(--paper);outline-offset:-2px;transform:rotate(3deg);justify-self:end;margin-bottom:8px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.postage b{font-family:var(--f-display);font-weight:800;line-height:1.05;white-space:nowrap}
+.postage small{font-family:var(--f-mono);font-size:.5rem;letter-spacing:.1em;text-transform:uppercase}
+.postage::after{content:"";position:absolute;left:-36px;top:48px;width:64px;height:64px;border-radius:50%;border:2px solid rgba(29,33,51,.5);
+  background:repeating-linear-gradient(0deg,transparent 0 9px,rgba(29,33,51,.3) 9px 10px)}
+@media (max-width:560px){.postage{justify-self:start;margin-left:40px}}
+@media (max-width:600px){
+  .bar{position:relative;padding:12px 14px;gap:12px}
+  .brand{padding-right:96px}
+  .snd{position:absolute;top:14px;right:14px}
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%}
+  .stat .label{font-size:.56rem;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stat b{text-align:center;padding:2px 4px;font-size:.9rem}
+  .bar .who{font-size:1.2rem}
+  .cover .sub{letter-spacing:.14em}
+}
+@media (prefers-reduced-motion: reduce){#app.enter > *,.opt.right,.opt.wrong,.stamp.holo{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ---------------- CONTENT ---------------- */
+const DESTS = [
+{ id:"japan", name:"Japan", region:"East Asia", color:"#ff5a6e", lat:36.2, lon:138.3, city:"Tokyo", code:"HND", fact:"Japan is made up of thousands of islands, but most people live on the four largest: Honshu, Hokkaido, Kyushu, and Shikoku.", emblem:"日本", teaser:"Bows, shoes at the door, and cherry blossoms.",
+  phrase:{say:"Konnichiwa", lang:"Japanese", means:"Hello / Good afternoon"},
+  lead:"Japan is an island nation of about 124 million people. Its culture places a high value on harmony, politeness, and respect for others, and many customs are designed to keep shared spaces calm and clean.",
+  notes:[
+    {h:"Greetings", t:"People greet each other by bowing (ojigi) instead of hugging. A deeper, longer bow shows more respect, so you bow lower to a teacher or an elder than to a friend."},
+    {h:"Food", t:"Rice is the center of most meals. Before eating, people say “itadakimasu” (“I humbly receive”). Never stand chopsticks upright in a bowl of rice: that is done at funerals."},
+    {h:"Home customs", t:"Shoes come off in the genkan, the small entryway of a home, and guests often switch into slippers. Tipping is not customary; good service is simply expected."},
+    {h:"Celebrations", t:"Shōgatsu (New Year) is the most important holiday, a time for family and visiting shrines. In spring, families hold hanami parties under the cherry blossoms."},
+    {h:"Arts", t:"Japan gave the world origami (paper folding), kabuki theater, and the haiku, a short poem with a 5‑7‑5 syllable pattern."},
+    {h:"Beliefs", t:"Many Japanese people take part in both Shinto and Buddhist traditions, often visiting Shinto shrines for celebrations and Buddhist temples for remembrance."}
+  ],
+  quiz:[
+    {q:"In Japan, what does a deeper, longer bow communicate?", o:["More respect","That you are in a hurry","That you are angry","That you want to shake hands"], a:0, why:"The depth of a bow shows the level of respect. Students bow lower to teachers and elders than to friends."},
+    {q:"Why is it rude to stand chopsticks straight up in a bowl of rice?", o:["It looks like a funeral ritual","It wastes rice","It breaks the chopsticks","It means you are still hungry"], a:0, why:"Chopsticks standing upright in rice are part of funeral rites, so doing it at a meal is upsetting."},
+    {q:"What syllable pattern does a traditional haiku follow?", o:["5‑7‑5","3‑3‑3","10‑10","4‑8‑4"], a:0, why:"A haiku has three lines of 5, 7, and 5 syllables, often about nature or a season."},
+    {q:"What is hanami?", o:["Viewing cherry blossoms in spring","A type of noodle soup","A New Year gift of money","A martial art"], a:0, why:"Hanami means “flower viewing.” Friends and families picnic under blooming cherry trees."}
+  ],
+  match:[["Konnichiwa","Hello"],["Genkan","Entryway where shoes come off"],["Origami","The art of folding paper"],["Itadakimasu","Said before eating a meal"]],
+  scenario:{q:"Your friend Haruto invites you to his family’s home in Osaka. You arrive at the front door. What do you do first?",
+    o:[["Take off your shoes in the entryway and put on the slippers offered",true,"Correct. Shoes stay in the genkan so the house stays clean. Slippers are often provided for guests."],
+       ["Walk straight in and find a seat on the sofa",false,"Walking inside with shoes on would track dirt into the home and is considered very rude."],
+       ["Give his parents a big hug",false,"Hugging is uncommon, especially with adults you have just met. A polite bow is the right greeting."]]}
+},
+{ id:"india", name:"India", region:"South Asia", color:"#ffa83d", lat:26.9, lon:75.8, city:"Jaipur", code:"JAI", fact:"Chess is believed to have begun in India about 1,500 years ago as a game called chaturanga.", emblem:"भारत", teaser:"Festivals of light and color, and many languages.",
+  phrase:{say:"Namaste", lang:"Hindi", means:"Hello (said with palms pressed together)"},
+  lead:"India has more than 1.4 billion people, making it the most populous country on earth. It is not one culture but many, with different languages, foods, and traditions from region to region.",
+  notes:[
+    {h:"Greetings", t:"“Namaste” is said with the palms pressed together near the chest and a slight bow. Many young people show respect by touching the feet of elders."},
+    {h:"Languages", t:"India’s constitution officially recognizes 22 languages. Hindi and English are used by the national government, but millions speak Bengali, Tamil, Telugu, Marathi, and many more."},
+    {h:"Food", t:"Food is often eaten with the right hand, using flatbread like roti to scoop. A thali is a large platter with many small dishes. Many Indians are vegetarian for religious reasons."},
+    {h:"Celebrations", t:"Diwali, the festival of lights, fills homes with oil lamps and fireworks. Holi, in spring, is the festival of colors, when people throw bright powder at each other."},
+    {h:"Beliefs", t:"Most Indians are Hindu, and India also has one of the world’s largest Muslim populations, plus Sikh, Christian, Buddhist, and Jain communities."},
+    {h:"Arts & dress", t:"Women may wear the sari, a long draped cloth. Homes are decorated with rangoli, colorful designs made on the floor. India’s film industry, including Bollywood, makes more movies than any other country."}
+  ],
+  quiz:[
+    {q:"Diwali is best known as the festival of…", o:["Lights","Colors","Harvest","Kites"], a:0, why:"During Diwali families light small oil lamps called diyas, set off fireworks, and share sweets."},
+    {q:"Which festival is famous for throwing colored powder?", o:["Holi","Diwali","Eid","Pongal"], a:0, why:"Holi celebrates the arrival of spring with clouds of colored powder and water."},
+    {q:"When eating with your hands in India, which hand is traditionally used?", o:["The right hand","The left hand","Either hand","Both hands together"], a:0, why:"The right hand is used for eating and for giving and receiving things. The left is considered unclean."},
+    {q:"How many languages does India’s constitution officially recognize?", o:["22","2","8","100"], a:0, why:"There are 22 “scheduled” languages, and hundreds more are spoken across the country."}
+  ],
+  match:[["Namaste","Greeting with palms pressed together"],["Thali","Platter with many small dishes"],["Rangoli","Colorful designs made on the floor"],["Sari","A long draped garment"]],
+  scenario:{q:"Your host family in Jaipur serves dal and roti, with no forks or spoons on the table. What do you do?",
+    o:[["Tear a piece of roti with your right hand and use it to scoop the dal",true,"Exactly. Bread works as your spoon, and the right hand is the one used for eating."],
+       ["Ask loudly why they don’t own forks",false,"This would embarrass your hosts. Eating by hand is a normal, respected tradition."],
+       ["Eat with your left hand so your right stays clean",false,"The left hand is considered unclean for eating. Use your right."]]}
+},
+{ id:"morocco", name:"Morocco", region:"North Africa", color:"#3de0c0", lat:31.6, lon:-8.0, city:"Marrakech", code:"RAK", fact:"The University of al-Qarawiyyin in Fez, founded in 859 by a woman named Fatima al-Fihri, is often called the oldest university still operating today.", emblem:"المغرب", teaser:"Mint tea, busy souks, and tiled courtyards.",
+  phrase:{say:"As-salamu alaykum", lang:"Arabic", means:"Peace be upon you (reply: wa alaykum as-salam)"},
+  lead:"Morocco sits at the northwest corner of Africa, just across the sea from Spain. Its culture blends Arab, Amazigh (Berber), African, and European influences.",
+  notes:[
+    {h:"Greetings", t:"People greet with “As-salamu alaykum,” meaning “peace be upon you.” A handshake is common, and many people touch their heart afterward to show sincerity."},
+    {h:"Hospitality", t:"Sweet mint tea is the symbol of welcome. It is poured from high above the glass to make foam. Turning down tea from a host can seem unfriendly."},
+    {h:"Food", t:"A tagine is both a cone-lidded clay pot and the slow-cooked stew made in it. Couscous is traditionally shared by families on Fridays."},
+    {h:"Languages", t:"Arabic and Amazigh (Berber) are the official languages. French is widely used in business and schools."},
+    {h:"Beliefs", t:"Most Moroccans are Muslim. During the month of Ramadan, believers fast from dawn to sunset, and the month ends with the celebration of Eid al‑Fitr."},
+    {h:"Cities & markets", t:"Old cities are called medinas, with narrow walled streets. Their markets, the souks, are places where bargaining over prices is expected. Buildings are decorated with zellige, colorful mosaic tilework."}
+  ],
+  quiz:[
+    {q:"What does serving mint tea to a guest represent in Morocco?", o:["Hospitality and welcome","That the visit is over","A business deal is closed","An apology"], a:0, why:"Mint tea is offered to welcome guests, and sharing it builds friendship."},
+    {q:"A tagine is named after…", o:["The clay pot it is cooked in","A famous king","A desert","A spice"], a:0, why:"The tagine pot has a tall cone-shaped lid that traps steam and keeps the stew moist."},
+    {q:"Which are the two official languages of Morocco?", o:["Arabic and Amazigh","French and Spanish","Arabic and English","Amazigh and French"], a:0, why:"Arabic and Amazigh are official. French is widely spoken but not official."},
+    {q:"In a Moroccan souk, what do shoppers usually do?", o:["Bargain over prices","Pay only the posted price","Pay with gold coins","Shop in silence"], a:0, why:"Bargaining is expected and friendly. It is part of the social life of the market."}
+  ],
+  match:[["Souk","A traditional market"],["Medina","The old walled part of a city"],["Zellige","Colorful mosaic tilework"],["Tagine","Clay pot with a cone lid, and its stew"]],
+  scenario:{q:"While you look at leather bags in a Marrakech souk, the shopkeeper offers you a glass of mint tea. What is the best response?",
+    o:[["Accept with thanks and drink at least a little",true,"Right. Accepting tea is polite even if you do not buy anything. It is a gesture of welcome."],
+       ["Refuse and walk away quickly",false,"Rushing off after refusing hospitality can come across as cold or rude."],
+       ["Offer to pay him for the tea",false,"The tea is a gift of hospitality. Offering money for it could be insulting."]]}
+},
+{ id:"ghana", name:"Ghana", region:"West Africa", color:"#ffd23d", lat:5.6, lon:-0.2, city:"Accra", code:"ACC", fact:"Ghana is one of the world’s biggest growers of cocoa, the bean used to make chocolate.", emblem:"AKWAABA", teaser:"Kente cloth, Adinkra symbols, and day names.",
+  phrase:{say:"Akwaaba", lang:"Twi (Akan)", means:"Welcome"},
+  lead:"Ghana, on the coast of West Africa, became independent from Britain in 1957, one of the first African countries south of the Sahara to do so. It is known for its warm hospitality.",
+  notes:[
+    {h:"Greetings", t:"Greeting everyone in a room is important. Elders are greeted first, and handshakes are given with the right hand. Skipping greetings can seem very rude."},
+    {h:"Day names", t:"Among the Akan people, children receive a name based on the day of the week they were born. A boy born on Friday is Kofi, and one born on Saturday is Kwame. The famous UN leader Kofi Annan was born on a Friday."},
+    {h:"Kente cloth", t:"Kente is a brightly colored cloth woven in narrow strips by the Asante (Ashanti) and Ewe peoples. Each color carries a meaning: gold for wealth, green for growth, and so on."},
+    {h:"Adinkra symbols", t:"Adinkra are symbols that express proverbs and ideas. Sankofa, a bird looking backward, means “go back and get it”: learn from the past to build the future."},
+    {h:"Food", t:"Fufu is a soft dough made by pounding cassava and plantain, eaten with soup using the right hand. Jollof rice is a national favorite, and Ghana has a friendly rivalry with Nigeria over whose is best."},
+    {h:"Beliefs & festivals", t:"Most Ghanaians are Christian, with a large Muslim minority. The Ga people celebrate Homowo, a harvest festival whose name means “hooting at hunger.”"}
+  ],
+  quiz:[
+    {q:"In Akan tradition, a boy named Kofi was born on which day?", o:["Friday","Monday","Sunday","Wednesday"], a:0, why:"Kofi is the Akan day name for a boy born on Friday."},
+    {q:"What is kente?", o:["A woven cloth with meaningful colors","A drum","A type of soup","A greeting"], a:0, why:"Kente is woven in strips, and its colors and patterns carry meaning."},
+    {q:"What lesson does the Sankofa symbol teach?", o:["Learn from the past to build the future","Never look back","Work alone","Always be first"], a:0, why:"Sankofa shows a bird looking back. It means it is not wrong to go back for what you have forgotten."},
+    {q:"When entering a room in Ghana, who should you greet first?", o:["The elders","The youngest child","Only the host","Nobody, just sit down"], a:0, why:"Respect for elders is central. Greet them first, then everyone else."}
+  ],
+  match:[["Akwaaba","Welcome"],["Kente","Colorful woven cloth"],["Fufu","Pounded cassava and plantain"],["Sankofa","Symbol: learn from the past"]],
+  scenario:{q:"You walk into your friend Ama’s living room in Accra. Her grandparents, parents, and cousins are all there. What should you do?",
+    o:[["Greet each person, starting with the elders, and shake hands with your right hand",true,"Perfect. Greeting everyone individually, elders first, shows respect."],
+       ["Wave once to the whole room and sit down",false,"A single wave can seem careless. Each person, especially the elders, should be greeted."],
+       ["Wait for someone to greet you first",false,"In Ghana, the person arriving is expected to greet those already there."]]}
+},
+{ id:"peru", name:"Peru", region:"South America", color:"#c78bff", lat:-13.5, lon:-72.0, city:"Cusco", code:"CUZ", fact:"The potato was first farmed thousands of years ago in the Andes, near Lake Titicaca on the Peru–Bolivia border.", emblem:"INTI", teaser:"The Inca, the Andes, and thousands of potatoes.",
+  phrase:{say:"Allillanchu", lang:"Quechua", means:"Hello, how are you?"},
+  lead:"Peru stretches from the Pacific coast up into the Andes mountains and down into the Amazon rainforest. It was the heart of the Inca Empire, whose capital was the city of Cusco.",
+  notes:[
+    {h:"Languages", t:"Spanish is the most common language, but Quechua, the language of the Inca, is still spoken by millions of Peruvians, especially in the highlands."},
+    {h:"Greetings", t:"A handshake is common when meeting someone. Among friends, women often greet with a single kiss on the cheek."},
+    {h:"Food", t:"Peru grows thousands of potato varieties; the potato was first farmed in the Andes. Ceviche, a national dish, is raw fish “cooked” by soaking in lime juice."},
+    {h:"Celebrations", t:"Inti Raymi, the Festival of the Sun, is held every June in Cusco. It recreates an Inca ceremony honoring Inti, the sun god, at the winter solstice."},
+    {h:"Wonders", t:"Machu Picchu, a stone city built high in the mountains by the Inca in the 1400s, is one of the most famous archaeological sites in the world."},
+    {h:"Crafts & faith", t:"Andean weavers make warm, colorful textiles from alpaca and llama wool. Most Peruvians are Catholic, and many festivals mix Catholic and Andean traditions."}
+  ],
+  quiz:[
+    {q:"What does the festival of Inti Raymi honor?", o:["The sun","The ocean","The harvest moon","A Spanish king"], a:0, why:"Inti is the Inca sun god. The festival takes place around the June solstice."},
+    {q:"How is ceviche “cooked”?", o:["By soaking raw fish in lime juice","By frying in oil","By boiling in soup","By smoking over fire"], a:0, why:"The acid in lime juice changes the fish so it looks and tastes cooked."},
+    {q:"Which language of the Inca is still spoken by millions today?", o:["Quechua","Latin","Nahuatl","Portuguese"], a:0, why:"Quechua is an official language of Peru alongside Spanish."},
+    {q:"Peru is famous for growing thousands of varieties of which crop?", o:["Potatoes","Rice","Wheat","Bananas"], a:0, why:"The potato was first farmed in the Andes, and Peruvians grow thousands of kinds."}
+  ],
+  match:[["Quechua","Language of the Inca"],["Ceviche","Raw fish cured in lime juice"],["Inti Raymi","Festival of the Sun"],["Alpaca","Andean animal prized for its wool"]],
+  scenario:{q:"Near Cusco you see a woman in a beautiful woven shawl leading a baby llama. You want a photo. What do you do?",
+    o:[["Ask her politely first, and accept her answer",true,"Yes. Always ask before photographing people. Some may ask for a small payment, which is fair."],
+       ["Take the photo quickly before she notices",false,"Photographing people without permission treats them like scenery instead of people."],
+       ["Pet the llama and pose without asking",false,"The animal belongs to her. Ask first."]]}
+},
+{ id:"mexico", name:"Mexico", region:"North America", color:"#ff7a3d", lat:19.0, lon:-98.2, city:"Puebla", code:"PBC", fact:"Mexico City is built on top of Tenochtitlan, the Aztec capital that once stood on an island in the middle of a lake.", emblem:"MÉXICO", teaser:"Marigolds, mariachi, and the gift of corn.",
+  phrase:{say:"Buenos días", lang:"Spanish", means:"Good morning"},
+  lead:"Mexico blends the traditions of Indigenous peoples such as the Aztec (Mexica) and Maya with Spanish culture brought in the 1500s. Family is at the center of daily life.",
+  notes:[
+    {h:"Greetings", t:"A handshake and a polite “Buenos días” are standard. Friends often greet with a kiss on the cheek. Elders are addressed with the formal “usted” instead of “tú.”"},
+    {h:"Food", t:"Corn has been the heart of Mexican cooking for thousands of years and is used to make tortillas and tamales. Mole is a rich sauce that can contain chocolate and chiles. UNESCO lists traditional Mexican cuisine as world heritage."},
+    {h:"Día de Muertos", t:"On November 1–2, families build ofrendas (home altars) with photos, favorite foods, and orange cempasúchil (marigold) flowers to remember loved ones who have died. Many families gather at cemeteries."},
+    {h:"Music & milestones", t:"Mariachi bands with violins, trumpets, and guitars play at celebrations. A quinceañera is a big celebration of a girl’s 15th birthday."},
+    {h:"Languages", t:"Spanish is the most spoken language, but Mexico recognizes 68 Indigenous languages. Nahuatl, the Aztec language, gave English the words chocolate, tomato, and avocado."},
+    {h:"Beliefs", t:"Most Mexicans are Catholic, and a growing number are Protestant. December 12 honors the Virgin of Guadalupe, an important day for Mexican Catholics."}
+  ],
+  quiz:[
+    {q:"What are the orange marigolds on a Día de Muertos ofrenda for?", o:["Their color and scent are believed to guide the spirits","They are eaten as dessert","They keep insects away","They show the family is rich"], a:0, why:"Traditionally, the bright color and strong scent of cempasúchil are said to guide the departed home."},
+    {q:"A quinceañera celebrates a girl turning…", o:["15","13","18","21"], a:0, why:"“Quince” means fifteen. The party marks the passage from girlhood to young womanhood."},
+    {q:"Which English word comes from Nahuatl, the Aztec language?", o:["Chocolate","Coffee","Banana","Sugar"], a:0, why:"Chocolate comes from Nahuatl, and so do tomato and avocado."},
+    {q:"When speaking to an elder in Mexico, which form of “you” is respectful?", o:["Usted","Tú","Vos","Ustedes only"], a:0, why:"“Usted” is the formal, respectful form, used with elders and people you don’t know well."}
+  ],
+  match:[["Ofrenda","Home altar for loved ones"],["Cempasúchil","Orange marigold flower"],["Mariachi","Band with violins, trumpets, guitars"],["Tortilla","Thin flatbread made from corn"]],
+  scenario:{q:"Your classmate Sofía introduces you to her grandmother at lunch in Puebla. What is the best greeting?",
+    o:[["Say “Buenas tardes, señora,” shake her hand, and speak to her as “usted”",true,"Excellent. A formal greeting and “usted” show respect to elders."],
+       ["Say “¿Qué onda?” like you would to a friend",false,"That is slang for “what’s up?” and too casual for someone’s grandmother."],
+       ["Just nod and keep eating",false,"Skipping a proper greeting would seem rude. Greetings matter a lot in Mexico."]]}
+},
+{ id:"italy", name:"Italy", region:"Southern Europe", color:"#7ee07a", lat:41.9, lon:12.5, city:"Rome", code:"FCO", fact:"Italy has more UNESCO World Heritage Sites than almost any other country on earth.", emblem:"ITALIA", teaser:"Evening strolls, meals in courses, and the Renaissance.",
+  phrase:{say:"Buongiorno", lang:"Italian", means:"Good morning / Good day"},
+  lead:"Italy is a boot-shaped peninsula in the Mediterranean. Ancient Rome was centered here, and the country’s art, food, and music have shaped cultures around the world.",
+  notes:[
+    {h:"Greetings", t:"Strangers shake hands. Friends and family often kiss lightly on both cheeks. “Ciao” is a casual hello or goodbye, while “Buongiorno” is the polite daytime greeting."},
+    {h:"Meals", t:"A traditional meal comes in courses: antipasto (starter), primo (pasta, risotto, or soup), and secondo (meat or fish). Each region has its own specialties, from pizza in Naples to risotto in Milan."},
+    {h:"Coffee", t:"Many Italians drink cappuccino only in the morning and order a small espresso after lunch or dinner. Coffee is often drunk standing at the bar."},
+    {h:"Daily life", t:"The passeggiata is a slow evening stroll through town to see neighbors and be seen. Families often gather for long Sunday lunches."},
+    {h:"Arts", t:"The Renaissance began in Florence in the 1300s and 1400s, with artists like Leonardo da Vinci and Michelangelo. Opera was born in Italy around 1600."},
+    {h:"Faith & festivals", t:"Most Italians are Catholic, and Vatican City, the center of the Catholic Church, is surrounded by Rome. Carnevale in Venice is famous for its elaborate masks."}
+  ],
+  quiz:[
+    {q:"What is the passeggiata?", o:["A relaxed evening stroll through town","A type of pasta","A morning coffee","A soccer chant"], a:0, why:"In the evening many Italians walk through the main square or streets to chat with friends."},
+    {q:"In a traditional Italian meal, what is usually served as the primo (first course)?", o:["Pasta, risotto, or soup","Dessert","Meat or fish","Coffee"], a:0, why:"Primo is the first main course. The secondo, meat or fish, comes after."},
+    {q:"In which Italian city did the Renaissance begin?", o:["Florence","Venice","Naples","Milan"], a:0, why:"Florence was home to wealthy patrons like the Medici family, who supported artists."},
+    {q:"Which art form was born in Italy around the year 1600?", o:["Opera","Ballet","Jazz","Hip-hop"], a:0, why:"The first operas were written in Florence, and Italian is still the main language of opera."}
+  ],
+  match:[["Ciao","Casual hello or goodbye"],["Passeggiata","Evening stroll through town"],["Primo","First course: pasta or risotto"],["Carnevale","Festival famous for masks in Venice"]],
+  scenario:{q:"You finish a big lunch in Rome with your host family and want a coffee. What would most fit local custom?",
+    o:[["Order a small espresso",true,"Right. Espresso is the usual coffee after a meal. It is a custom, not a rule."],
+       ["Order a huge iced coffee to go",false,"Coffee is usually small and enjoyed on the spot, not carried around."],
+       ["Order a cappuccino",false,"Many Italians see milky cappuccino as a morning drink. It is not forbidden, just unusual after lunch."]]}
+},
+{ id:"aotearoa", name:"Aotearoa New Zealand", region:"Oceania · Māori", color:"#5ab8ff", lat:-38.1, lon:176.2, city:"Rotorua", code:"ROT", fact:"Aotearoa is often translated as “land of the long white cloud.”", emblem:"KIA ORA", teaser:"The hongi, the haka, and the Māori New Year.",
+  phrase:{say:"Kia ora", lang:"Māori (te reo Māori)", means:"Hello / Thank you / Be well"},
+  lead:"The Māori are the Indigenous Polynesian people of New Zealand. They arrived by voyaging canoe from eastern Polynesia over 700 years ago. Aotearoa is the Māori name for the country.",
+  notes:[
+    {h:"Greetings", t:"The hongi is a traditional greeting in which two people press their noses and foreheads together, sharing the breath of life (hā)."},
+    {h:"The marae", t:"A marae is a communal meeting ground with a carved meeting house. Visitors are welcomed in a pōwhiri ceremony with speeches and songs, and they wait until the hosts invite them on."},
+    {h:"Haka", t:"The haka is a ceremonial dance with chanting, stamping, and strong expressions. It is performed to welcome guests, honor achievements, or at funerals. The All Blacks rugby team performs one before matches."},
+    {h:"Food", t:"A hāngī is a feast cooked in an earth oven: food is placed on heated stones in a pit and covered with earth for hours."},
+    {h:"Matariki", t:"Matariki, the Māori New Year, begins when the star cluster Matariki (the Pleiades) rises in mid-winter. Since 2022 it has been a public holiday in New Zealand."},
+    {h:"Customs & art", t:"The head is considered the most sacred part of the body, so don’t touch someone’s head, and never sit on tables where food is served. Tā moko is traditional tattooing that shows a person’s ancestry."}
+  ],
+  quiz:[
+    {q:"What happens during a hongi?", o:["Two people press noses and foreheads together","Two people bow deeply","Two people kiss both cheeks","Two people clap three times"], a:0, why:"The hongi shares the hā, the breath of life, between two people."},
+    {q:"Matariki, the Māori New Year, begins with the rising of…", o:["A star cluster (the Pleiades)","The full moon","The first spring flower","The longest day of summer"], a:0, why:"When the Matariki cluster appears before dawn in mid-winter, the new year begins."},
+    {q:"How is food cooked in a hāngī?", o:["In an earth oven of hot stones","In a frying pan","Raw, with lime juice","On a stick over a campfire"], a:0, why:"Food is buried with heated stones and steamed for hours."},
+    {q:"Why should you avoid sitting on a table in Māori culture?", o:["Tables are for food, and mixing body and food is disrespectful","Tables are only for elders","It breaks a sacred carving","It is bad luck for fishing"], a:0, why:"Food and the body are kept separate out of respect. Sitting on tables, or on pillows meant for the head, is avoided."}
+  ],
+  match:[["Kia ora","Hello / thank you / be well"],["Marae","Communal meeting ground"],["Hāngī","Feast cooked in an earth oven"],["Tā moko","Traditional tattooing showing ancestry"]],
+  scenario:{q:"Your school group visits a marae near Rotorua. You arrive at the entrance while the hosts are still preparing. What should you do?",
+    o:[["Wait with your group until you are formally welcomed in the pōwhiri",true,"Yes. Visitors are called onto the marae by the hosts. Waiting shows respect."],
+       ["Walk in and explore the meeting house",false,"Entering before you are welcomed would ignore an important tradition."],
+       ["Sit on the dining tables while you wait",false,"Sitting on tables where food is served is considered disrespectful."]]}
+},
+{ id:"southafrica", name:"South Africa", region:"Southern Africa", color:"#ff6ad5", lat:-26.2, lon:28.05, city:"Johannesburg", code:"JNB", fact:"South Africa has three capital cities: Pretoria, Cape Town, and Bloemfontein. Each one is home to a different branch of government.", emblem:"UBUNTU", teaser:"Ubuntu, braais, and twelve official languages.",
+  phrase:{say:"Sawubona", lang:"isiZulu", means:"Hello. It literally means “I see you.”"},
+  lead:"South Africa sits at the southern tip of Africa. It is often called the “Rainbow Nation” because so many peoples, languages, and cultures live together there.",
+  notes:[
+    {h:"Greetings", t:"In isiZulu, people greet with “Sawubona,” which means “I see you.” The reply, “Yebo, sawubona,” means “Yes, I see you too.” A handshake is common, and among friends it may have three parts: grip, thumb, grip."},
+    {h:"Languages", t:"South Africa has 12 official languages, including isiZulu, isiXhosa, Afrikaans, English, Sesotho, and South African Sign Language, which became official in 2023."},
+    {h:"Ubuntu", t:"Ubuntu is a way of thinking summed up as “I am because we are.” It teaches that a person becomes fully human by caring for others and for the community."},
+    {h:"Food", t:"A braai (barbecue) is a favorite way to gather with friends and family. Pap, a stiff porridge made from maize meal, is a staple often eaten with stew or grilled meat."},
+    {h:"History & holidays", t:"Under apartheid, laws separated people by race. In 1994, Nelson Mandela became the first democratically elected president. April 27 is Freedom Day, and September 24 is Heritage Day, when people celebrate their cultures, often with a braai."},
+    {h:"Arts & beliefs", t:"Ndebele artists are famous for bold, geometric house paintings and beadwork. Gumboot dancing began with miners who stamped and slapped their boots to communicate. Most South Africans are Christian, and many also keep traditional customs."}
+  ],
+  quiz:[
+    {q:"What does the isiZulu greeting “Sawubona” literally mean?", o:["I see you","Good night","Let’s eat","Where are you going?"], a:0, why:"Sawubona means “I see you.” It is a way of saying that you truly notice and value the other person."},
+    {q:"Ubuntu is often summed up as…", o:["“I am because we are”","“Every person for themselves”","“Work hard, play hard”","“The early bird gets the worm”"], a:0, why:"Ubuntu teaches that people are connected, and we become our best selves by caring for one another."},
+    {q:"How many official languages does South Africa have?", o:["12","1","3","50"], a:0, why:"There are 12, and the newest is South African Sign Language, added in 2023."},
+    {q:"Who became South Africa’s first democratically elected president in 1994?", o:["Nelson Mandela","Desmond Tutu","Kofi Annan","Jomo Kenyatta"], a:0, why:"Nelson Mandela spent 27 years in prison for opposing apartheid, then was elected president in 1994."}
+  ],
+  match:[["Sawubona","Hello that means “I see you”"],["Braai","Barbecue gathering with friends"],["Ubuntu","“I am because we are”"],["Pap","Stiff porridge made from maize meal"]],
+  scenario:{q:"Your friend Thandi invites you to her family’s braai on Heritage Day in Durban. When you arrive, her grandfather smiles and says “Sawubona.” What do you do?",
+    o:[["Reply “Yebo, sawubona” and shake his hand",true,"Exactly. “Yes, I see you too” returns the greeting and honors him as an elder."],
+       ["Say nothing and head straight to the food",false,"Skipping the greeting would be rude, especially to an elder who greeted you first."],
+       ["Laugh because the word sounds unfamiliar",false,"Laughing at someone’s language is disrespectful. Learn the reply and use it."]]}
+}
+];
+
+/* ---------------- STATE ---------------- */
+const STEPS = ["notes","quiz","match","customs","postcard","stamp"];
+const STEP_LABEL = {notes:"Field notes",quiz:"Questions",match:"Matching",customs:"Customs",postcard:"Postcard",stamp:"Stamp"};
+const READ_SECONDS = 25;
+const PTS = {mc:100, pair:25, pairMiss:10, customs:100, postcard:50, final:50};
+const MAX_DEST = 4*PTS.mc + 4*PTS.pair + PTS.customs + PTS.postcard;
+const FINAL_N = 15;
+
+let S = freshState();
+function freshState(){return {name:"", started:0, view:"cover", cur:null, step:0, done:{}, run:null, final:null, brief:null, streak:0, best:0, bonus:0, right:0, asked:0};}
+function save(){try{localStorage.setItem("wp-state",JSON.stringify(S));}catch(e){}}
+function load(){try{const x=JSON.parse(localStorage.getItem("wp-state")||"null"); if(x&&x.view) return x;}catch(e){} return null;}
+
+const $app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle = a => {a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a;};
+const dest = id => DESTS.find(d=>d.id===id);
+const totalScore = () => Object.values(S.done).reduce((t,d)=>t+d.score,0) + (S.final&&S.final.finished? S.final.score:0) + (S.bonus||0);
+const fmt = ms => {const s=Math.max(0,Math.floor(ms/1000)); return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");};
+
+/* ---------------- STAMP SVG ---------------- */
+let stampN=0;
+function stamp(d, grade, small){
+  const id="sp"+(stampN++);
+  const col = d.color;
+  const word = grade==="gold"?"DISTINCTION":grade==="pass"?"ADMITTED":"PROVISIONAL";
+  const name = d.name.toUpperCase().replace("AOTEAROA ","AOTEAROA · ");
+  const em = d.emblem.length>6 ? 20 : 30;
+  return `<svg class="stamp ${grade==="gold"?"holo":""}" viewBox="0 0 200 200" role="img" aria-label="${esc(d.name)} stamp, ${word.toLowerCase()}" style="color:${col}">
+    <defs><path id="${id}" d="M100,100 m-72,0 a72,72 0 1,1 144,0 a72,72 0 1,1 -144,0"/></defs>
+    <g fill="none" stroke="currentColor" opacity=".9">
+      <circle cx="100" cy="100" r="94" stroke-width="5"/><circle cx="100" cy="100" r="84" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="56" stroke-width="2" stroke-dasharray="3 4"/></g>
+    <text fill="currentColor" font-family="JetBrains Mono, monospace" font-size="${name.length>14?11:14}" font-weight="600" letter-spacing="3">
+      <textPath href="#${id}" startOffset="0">${esc(name)} ★ ${esc(d.region.toUpperCase())} ★</textPath></text>
+    <text x="100" y="${small?106:104}" text-anchor="middle" fill="currentColor" font-family="Big Shoulders Display, Impact, sans-serif" font-weight="800" font-size="${em}">${esc(d.emblem)}</text>
+    <rect x="44" y="118" width="112" height="20" fill="${grade==="gold"?"#ffd66b":"currentColor"}" opacity=".95"/>${grade==="gold"?'<circle cx="100" cy="100" r="98.5" fill="none" stroke="#ffd66b" stroke-width="1.5" stroke-dasharray="2 5"/>':""}
+    <text x="100" y="132.5" text-anchor="middle" style="fill:var(--card)" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600" letter-spacing="1.5">${word}</text>
+  </svg>`;
+}
+function gradeOf(score){const p=score/MAX_DEST; return p>=.85?"gold":p>=.6?"pass":"prov";}
+
+/* ---------------- TOP BAR ---------------- */
+const PLANE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
+function bar(){
+  const n=Object.keys(S.done).length;
+  return `<header class="bar"><div class="brand"><span class="logo">${PLANE}</span><div><div class="label">World Passport · Bearer</div><div class="who">${esc(S.name)}</div></div></div>
+   <div class="stats">
+    <div class="stat"><span class="label">Stamps</span><b>${n} / ${DESTS.length}</b></div>
+    <div class="stat"><span class="label">Points</span><b id="pts">${totalScore().toLocaleString()}</b></div>
+    <div class="stat"><span class="label">Flight time</span><b id="clock">${fmt(Date.now()-S.started)}</b></div>
+    <div class="stat"><span class="label">Streak</span><b>${S.streak||0}</b></div>
+    <button class="snd" id="snd" aria-pressed="${SND.on}">${SND.on?"Sound on":"Sound off"}</button>
+   </div></header>`;
+}
+
+/* ---------------- EFFECTS ---------------- */
+function flap(t){
+  return `<span class="flap" role="text" aria-label="${esc(t)}">` + String(t).toUpperCase().split(/\s+/).map(w=>
+    `<span class="w" aria-hidden="true">${[...w].map(c=>`<span class="ch" data-c="${esc(c)}">${esc(c)}</span>`).join("")}</span>`).join(" ") + `</span>`;
+}
+function scramble(f){
+  const cs=[...f.querySelectorAll(".ch")], A="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", t0=performance.now(); let last=-1e9;
+  (function step(now){
+    if(now-last<55){requestAnimationFrame(step); return;} last=now; let live=false;
+    cs.forEach((c,i)=>{const end=t0+200+i*55;
+      if(now<end){live=true; c.textContent=A[Math.random()*36|0]; c.classList.add("spin");}
+      else if(c.classList.contains("spin")){c.textContent=c.dataset.c; c.classList.remove("spin");}});
+    if(live) requestAnimationFrame(step);
+  })(t0);
+}
+const HOME={lat:9.93, lon:-84.08};
+/* land: 1-degree bitmask of Natural Earth land (rows 90N→90S, cols 180W→180E) */
+const LAND_B64="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA/P8/AOT//z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAED+///H////////AAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPD//3/+//////8PAAAAAAEAAHBwAgAAAB8AAAAAAAAAAAAAAAAAAAAAAAAAAPD//wf4//////8BAACA/z8AAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAw8Jz///H//////38AAAAA/wMAAAAAAAAAAAAfAAAAAAAAAAAAAAAAAAAAAIA4AADyP+D///////8AAAAAPAwAAAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAPzD0PP7P4D//////38AAAAAEAAAAAAA8AEAAID/DwAAAAAAAAAAAAAAAAAAAKD/4zP/DwAA/v////8AAAAAAAAAAADgBwAA4P//PwAA4J8BAAAAAAAAAAAAAA8YAGD+DwAA+P////8BAAAAAAAAAAB4AAAA/P//FwAAAAAAAAAAAAAAAAAAAP8Bhve5fwAA8P///38AAAAAAAAAAAAcAATg/////4cPAAYAAAAAAAAAAAAAgP9/x3f8/wEA4P///z8AAAAAAAAAAAAPAJ7s//////8fAD8AAAAAAwAAAAAAAMf/D3P8/w8AoP///z8AAAAAAAAAAAAPgO////////8f3/8HAACAAAD4/wAAEMD/P/j4//8AwP///zcAAAAAAPwDAAAAgN//////////////DwAAAAD+///h/4//P+6Bg/8B4P7//w8AAAAA4P8/ACAAn9///////////////99/A8D///////+7B8zPg/0BgP///wEAAAAA+P//B4P7/5//////////////////HwD/////////////h/kPwP//BwAAAAAA+P//H/P//9///////////////////8H8////////////A/w/wP//AwAIAAAA/v//3////////////////////////eH////////////fgP4ZgP8fAPA/AAAA/+N/8P//////////////////////QMD7///////////Pw/8HAP8PAMA/AADA//H//v////////////////////9/AAD+///////////DBPAHAP4HAIADAADw//z///////////////////////9/AID///////////8Aw8QDAPwDAAAAAAD8P/7///////////////////////9/AMD//////////z8AwB8AAPgDAAAAAAD+H/7/////////////////////Mf8DAID/7/z//////z8AwD8AAMABAAAAAAD+P/z/////////////////////wH8AAAD8MwD//////x8AwH8MAAAAAAAAAAD+f/D///////////////////99cAAAAADAAwD8/////38AwP8eAAAAAAAAgACcH/T//////////////////wMAOAAAAADABADw//////8AgP8/AAAAAAAAwAMAH/T//////////////////wAAfgAAAAAwAADg//////8PgP9/AAAAAAAAwANwD/7/////////////////PwAAfwAAAAAOAACA//////9/wP//AAAAAAAAgAPwA/7/////////////////HwCAPwAAAAAAAAAA/P//////4///AwAAAAAAOAdg8f//////////////////HwAAPwAAAAAAAACA/P//////4///DwAAAAAAPA78/////////////////////wUADwAAAAAAAAAA+P//////5///DwAAAAAAPD///////////////////////wcABwAAAAAAAAAA8P//////////DwAAAAAAhJ///////////////////////w0AAwAAAAAAAAAA8P//////////DQAAAAAAgOH//////////////////////w0AAAAAAAAAAAAA4P////////8xPAAAAAAAAPz//////////////////////w0AAAAAAAAAAAAAgP////////8PfgAAAAAAgP///////////////////////wQAAAAAAAAAAAAAAP////////8HfgAAAAAAAP7/////////////////////fwQAAAAAAAAAAAAAAP////////+PAAAAAAAAAPz//////P//////////////PwQAAAAAAAAAAAAAAP////////9/AAAAAAAAAPj////j/v//////////////PwAAAAAAAAAAAAAAAP////////8dAAAAAAAAAPj/+f8B/P//////////////DwQAAAAAAAAAAAAAAP///////z8EAAAAAAAA+P/H8/8A8P//////////////Bx4AAAAAAAAAAAAAgP///////x8AAAAAAAAA+H+gw/8A4P////////////9/AA8AAAAAAAAAAAAAAP///////x8AAAAAAAAA+H8Ajv/x4P////////////8/AAEAAAAAAAAAAAAAAP///////wcAAAAAAAAA+B8wuM///////////////98fAAMAAAAAAAAAAAAAAP///////wMAAAAAAAAA+A8wEMf//////////////2cOAAMAAAAAAAAAAAAAAP7//////wEAAAAAAAAA+A8AEM7//////////////wMegAEAAAAAAAAAAAAAAP7//////wAAAAAAAAAA+AcABob//////////////zccwAEAAAAAAAAAAAAAAPz//////wAAAAAAAAAAwOB/AAC2/////////////x888AEAAAAAAAAAAAAAAPj//////wAAAAAAAAAAQPh/ABAg/////////////w8c/gEAAAAAAAAAAAAAAPD/////fwAAAAAAAAAA4P9/AAAA/////////////w+AHwAAAAAAAAAAAAAAAMD/////HwAAAAAAAAAA8P9/AACA/////////////x/ABwAAAAAAAAAAAAAAAID/////DwAAAAAAAAAA+P//BweA/////////////x/AAAAAAAAAAAAAAAAAAID/////BwAAAAAAAAAA/P//D3/M/////////////z9AAAAAAAAAAAAAAAAAAAD5////BwAAAAAAAAAA/P///////////////////z8AAAAAAAAAAAAAAAAAAAD6/78HBwAAAAAAAAAA/P///////8///////////z8AAAAAAAAAAAAAAAAAAAD0/w8ABgAAAAAAAAAA/////////5///////////z8AAAAAAAAAAAAAAAAAAADu/wcADgAAAAAAAACA//////+//x///////////x8AAAAAAAAAAAAAAAAAAADY/wcADAAAAAAAAADA//////8//z/k/////////w8AAAAAAAAAAAAAAAAAAACQ/wcACAAAAAAAAADg//////9//v/I/////////wcAAAAAAAAAAAAAAAAAAAAw/wcAAAAAAAAAAADg//////9//v8cgP///////yMAAAAAAAAAAAAAAAAAAABg/gMAAAAAAAAAAADw/////////P9/AP///////zEAAAAAAAAAAAAAAAAAAAAA/AMAHQAAAAAAAAD4////////+f//AP7/////fxAAAAAAAAAAAAAAAAAAAAAA/AcYcAAAAAAAAAD4////////+f9/AP7/D///DwAAAAAAAAAAAAAAAAAAAAAA/AcewAMAAAAAAAD4////////8f8/AOD/B/9/AAAAAAAAAAAAAAAAAQAAAAAA+A8eADgAAAAAAAD4////////4f8/AOD/Afw/BgAAAAAAAAAAAAAAAAAAAAAA8N8PQHgCAAAAAADw////////4/8fAOD/APw/AiAAAAAAAAAAAAAAAAAAAAAAwP8PAAAAAAAAAADw////////x/8HAOB/APx/ADAAAAAAAAAAAAAAAAAAAAAAAP4PAAAAAAAAAAD4////////h/8BAOA/APz/ADAAAAAAAAAAAAAAAAAAAAAAAID/AAAAAAAAAAD4////////j/8AAMAfAMD/ATAAAAAAAAAAAAAAAAAAAAAAAAD/AQAAAAAAAAD4////////nx8AAMAPAMD/ATAAAAAAAAAAAAAAAAAAAAAAAAD8AQAAAAAAAAD4////////vwcAAIAPAMD/AeAAAAAAAAAAAAAAAAAAAAAAAADgAQAAAAAAAAD4/////////wAAAIAPAID8ASABAAAAAAAAAAAAAAAAAAAAAADAAGgAAAAAAADw////////f2AAAIAPAID4AUACAAAAAAAAAAAAAAAAAAAAAADAAf9zAAAAAADg/////////38AAAAPAEDwAMgAAAAAAAAAAAAAAAAAAAAAAAAAM+9/AAAAAADA/////////38AAAAXAMAgAAQAAAAAAAAAAAAAAAAAAAAAAAAA7v//AAAAAACA/////////z8AAAASAMAAAIAHAAAAAAAAAAAAAAAAAAAAAAAAyP//AQAAAACA/////////z8AAAAwAIABAMAHAAAAAAAAAAAAAAAAAAAAAAAAwP//BwAAAAAA/v///////x8AAAAwAAADAAMDAAAAAAAAAAAAAAAAAAAAAAAAwP//fwAAAAAA/A/+/////x8AAAAAAAgHAAcAAAAAAAAAAAAAAAAAAAAAAAAAwP///wAAAAAAEAD8/////w8AAAAAADAPwAMAAAAAAAAAAAAAAAAAAAAAAAAAwP///wEAAAAAAADA/////wcAAAAAAGAO4AMAAAAAAAAAAAAAAAAAAAAAAAAAwP///wEAAAAAAADA/////wMAAAAAAMAN+AMAAAAAAAAAAAAAAAAAAAAAAAAA4P///wMAAAAAAADg/////wEAAAAAAIAL/gcIAAAAAAAAAAAAAAAAAAAAAAAA8P///wMAAAAAAADg/////wAAAAAAAIAH/vMJAAAAAAAAAAAAAAAAAAAAAAAA+P///w8AAAAAAADg////fwAAAAAAAAAP/gMAAQAAAAAAAAAAAAAAAAAAAAAA+P///38AAAAAAADg////PwAAAAAAAAAf/HmAAwAAAAAAAAAAAAAAAAAAAAAA+P////8BAAAAAADA////HwAAAAAAAAB+/DkA9wEAAAAAAAAAAAAAAAAAAAAA+P////8fAAAAAACA////DwAAAAAAAAA8wDhU/g8AAAAAAAAAAAAAAAAAAAAA+P////9/AAAAAACA////DwAAAAAAAAA4AHgA+D8QAAAAAAAAAAAAAAAAAAAA+P//////AQAAAAAA////BwAAAAAAAAAwAAgAwH8OAAAAAAAAAAAAAAAAAAAA+P//////AQAAAAAA////BwAAAAAAAADAAQAAwP+AAAAAAAAAAAAAAAAAAAAA8P//////AQAAAAAA/v//DwAAAAAAAACAPwAAwP8AAAAAAAAAAAAAAAAAAAAA4P//////AQAAAAAA/v//DwAAAAAAAAAA4BcGAMcAAAAAAAAAAAAAAAAAAAAA4P//////AQAAAAAA/v//DwAAAAAAAAAAAAgBAIADAAAAAAAAAAAAAAAAAAAAwP//////AAAAAAAA/v//DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP////9/AAAAAAAA/P//HwAAAAAAAAAAAABAAAQAAAAAAAAAAAAAAAAAAAAAgP////8/AAAAAAAA/v//HyAAAAAAAAAAAACAHwQAAAAAAAAAAAAAAAAAAAAAAP////8fAAAAAAAA////HzAAAAAAAAAAAADADw4AAAAAAAAAAAAAAAAAAAAAAP////8fAAAAAAAA////HzAAAAAAAAAAAADuDx4AAAAAAAAAAAAAAAAAAAAAAP7///8fAAAAAAAA////H3wAAAAAAAAAAAD+Hx4AAAAAAAAAAAAAAAAAAAAAAPj///8fAAAAAAAA////Dz8AAAAAAAAAAID/Pz4AAACAAAAAAAAAAAAAAAAAAPD///8fAAAAAAAA////Az8AAAAAAAAAAMD//z8AAAAAAAAAAAAAAAAAAAAAAOD///8PAAAAAAAA////AR8AAAAAAAAAAMD//z8AAAAAAAAAAAAAAAAAAAAAAMD///8PAAAAAAAA/v//AB8AAAAAAAAAAOD///8AAAAAAAAAAAAAAAAAAAAAAMD///8PAAAAAAAA/v9/AB8AAAAAAAAAAPz///8BAAEAAAAAAAAAAAAAAAAAAMD///8HAAAAAAAA/P9/gA8AAAAAAAAAgP////8DAAIAAAAAAAAAAAAAAAAAAMD///8DAAAAAAAA/P//gA8AAAAAAAAAwP////8HAAAAAAAAAAAAAAAAAAAAAOD//38AAAAAAAAA/P//AA8AAAAAAAAAwP////8HAAAAAAAAAAAAAAAAAAAAAOD//x8AAAAAAAAA/P9/AAcAAAAAAAAA4P////8PAAAAAAAAAAAAAAAAAAAAAOD//w8AAAAAAAAA+P8fAAIAAAAAAAAAwP////8fAAAAAAAAAAAAAAAAAAAAAOD//wcAAAAAAAAA+P8fAAAAAAAAAAAAwP////8fAAAAAAAAAAAAAAAAAAAAAOD//w8AAAAAAAAA+P8fAAAAAAAAAAAAwP////8fAAAAAAAAAAAAAAAAAAAAAOD//wcAAAAAAAAA8P8PAAAAAAAAAAAAwP////8/AAAAAAAAAAAAAAAAAAAAAOD//wMAAAAAAAAA4P8HAAAAAAAAAAAAgP////8fAAAAAAAAAAAAAAAAAAAAAPD//wMAAAAAAAAA4P8HAAAAAAAAAAAAgP////8fAAAAAAAAAAAAAAAAAAAAAPD//wAAAAAAAAAAwP8DAAAAAAAAAAAAgP////8fAAAAAAAAAAAAAAAAAAAAAPD//wAAAAAAAAAAwP8BAAAAAAAAAAAAAP8D/P8PAAAAAAAAAAAAAAAAAAAAAPD/fwAAAAAAAAAAwH8AAAAAAAAAAAAAgP8A+P8PAAAAAAAAAAAAAAAAAAAAAPD/PwAAAAAAAAAAgAMAAAAAAAAAAAAAgAcA6P8HAAAAAAAAAAAAAAAAAAAAAPj/BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P8HAAAGAAAAAAAAAAAAAAAAAPj/BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8DAAAEAAAAAAAAAAAAAAAAAPz/BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8DAAAIAAAAAAAAAAAAAAAAAPz/AwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGwAAAA8AAAAAAAAAAAAAAAAAPg/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAAAAPw/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAPwHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAALAAAAAAAAAAAAAAAAAPwPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAIADAAAAAAAAAAAAAAAAAPgHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAOABAAAAAAAAAAAAAAAAAPwHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAAAAAP4BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHgAAAAAAAAAAAAAAAAAAP4BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAPwDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8AAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHwAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAAAAMAfAAAAgP//fADG/wAAAAAAAAAAAAAAAAAAAAAAAIAHAAAAAAAAAAAAAAAAAPz/HwCA/////////z8AAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAA4P///wP8//////////9nAAAAAAAAAAAAAAAAAAAAAHA/AAAAAAAAAAAAAABg+P///wH/////////////DwAAAAAAAAAAAAAAAAAAAOM/AAAAAAAAAAB8fwr+//////H/////////////3wMAAAAAAAAAAAAAAAAAAP5+AAAAAAAA//////////////j//////////////z8AAAAAAAAAAAAAAA8AAHh+AAAAAACA////////////f////////////////z8AAAAAAAAAYAAA4P//fP9/AAAAAADw/////////////////////////////wcAAAAAAAAAkfYzgP////9/AAAAAAD8/////////////////////////////wEAAAAAALT///////////8PAAAAAID/////////////////////////////fwAAAAAAgP7//////////38AAAAAwP//////////////////////////////fwAAAADAn////////////wcAAAAA/v///////////////////////////////wgAAAAA////////////P4AAAPwA/////////////////////////////////wEAAAAP4P///////////3ACAP4B+P//////////////////////////////HwAAAAAAwP///////////wH4wD8A/v//////////////////////////////DwAAAAAA//////////////8HAAD8////////////////////////////////PwAAAAAA/P////////////8/8P///////////////////////////////////wMAAPz///////////////////////////////////////////////////////8A/4P/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////";
+let LAND=null, LANDPTS=null;
+function isLand(lat,lon){
+  if(!LAND){const b=atob(LAND_B64); LAND=new Uint8Array(b.length); for(let i=0;i<b.length;i++) LAND[i]=b.charCodeAt(i);}
+  const r=Math.min(179,Math.max(0,Math.floor(90-lat))), c=((Math.floor(lon+180)%360)+360)%360, i=r*360+c;
+  return (LAND[i>>3]>>(i&7))&1;
+}
+function landPts(){
+  if(LANDPTS) return LANDPTS; LANDPTS=[]; const st=1.35;
+  for(let la=-84; la<=84; la+=st){const dl=st/Math.max(.12,Math.cos(la*Math.PI/180));
+    for(let lo=-180+((la*7)%dl+dl)%dl; lo<180; lo+=dl) if(isLand(la,lo)) LANDPTS.push({lat:la,lon:lo});}
+  return LANDPTS;
+}
+function globe(cv, reduce){
+  const ctx=cv.getContext("2d"), rad=Math.PI/180, mode=cv.dataset.mode, pts=landPts();
+  let W=0,H=0,R=0;
+  const fit=()=>{const r=cv.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1); W=r.width; H=r.height;
+    cv.width=Math.max(1,Math.round(W*dpr)); cv.height=Math.max(1,Math.round(H*dpr)); ctx.setTransform(dpr,0,0,dpr,0,0); R=Math.min(W,H)*0.40;};
+  fit(); window.addEventListener("resize",()=>{if(!document.body.contains(cv))return; fit(); if(reduce) draw(performance.now());});
+  const visited=Object.keys(S.done).map(dest).filter(Boolean), chain=[HOME,...visited];
+  const nextD = mode==="map" ? dest(order().find(id=>!S.done[id])||"") : null;
+  let lon0=visited.length?visited[visited.length-1].lon:HOME.lon, lat0=18, drag=null, idleAt=0, last=performance.now(), hover=null;
+  const P=(lat,lon)=>{const l0=lat0*rad, la=lat*rad, lo=(lon-lon0)*rad, cl=Math.cos(la);
+    return {x:W/2+R*cl*Math.sin(lo), y:H/2-R*(Math.cos(l0)*Math.sin(la)-Math.sin(l0)*cl*Math.cos(lo)), v:Math.sin(l0)*Math.sin(la)+Math.cos(l0)*cl*Math.cos(lo)};};
+  const vec=p=>[Math.cos(p.lat*rad)*Math.cos(p.lon*rad),Math.cos(p.lat*rad)*Math.sin(p.lon*rad),Math.sin(p.lat*rad)];
+  const gc=(a,b,n)=>{const A=vec(a),B=vec(b), d=Math.acos(Math.min(1,A[0]*B[0]+A[1]*B[1]+A[2]*B[2])), s=Math.sin(d)||1, out=[];
+    for(let i=0;i<=n;i++){const t=i/n, k1=Math.sin((1-t)*d)/s, k2=Math.sin(t*d)/s, x=k1*A[0]+k2*B[0], y=k1*A[1]+k2*B[1], z=k1*A[2]+k2*B[2];
+      out.push({lat:Math.asin(z/Math.hypot(x,y,z))/rad, lon:Math.atan2(y,x)/rad, lift:1+0.14*Math.sin(Math.PI*t)});}
+    return out;};
+  const arcs=[]; for(let i=1;i<chain.length;i++) arcs.push(gc(chain[i-1],chain[i],64));
+  const preview = nextD ? gc(chain[chain.length-1], nextD, 64) : null;
+  const line=(pts,style,w,dash,off)=>{ctx.beginPath(); let pen=false;
+    for(const p of pts){const q=P(p.lat,p.lon), L=p.lift||1;
+      if(q.v>-0.02){const x=W/2+(q.x-W/2)*L, y=H/2+(q.y-H/2)*L; pen?ctx.lineTo(x,y):ctx.moveTo(x,y); pen=true;} else pen=false;}
+    ctx.strokeStyle=style; ctx.lineWidth=w; ctx.setLineDash(dash||[]); ctx.lineDashOffset=off||0; ctx.stroke(); ctx.setLineDash([]);};
+  const pill=(t,x,y,c)=>{ctx.font="600 12px 'JetBrains Mono', monospace"; const w=ctx.measureText(t).width+14;
+    ctx.fillStyle="rgba(5,8,20,.88)"; ctx.fillRect(x,y-11,w,20); ctx.strokeStyle=c; ctx.lineWidth=1; ctx.strokeRect(x+.5,y-10.5,w-1,19); ctx.fillStyle=c; ctx.fillText(t,x+7,y+3.5);};
+  const label=(t,q,c)=>{ctx.font="600 10.5px 'JetBrains Mono', monospace"; ctx.fillStyle=c; ctx.fillText(t,q.x+8,q.y-7);};
+  const pinAt=(x,y)=>{let best=null,bd=18; DESTS.forEach(d=>{const q=P(d.lat,d.lon); if(q.v<=0.05) return; const dd=Math.hypot(q.x-x,q.y-y); if(dd<bd){bd=dd; best=d;}}); return best;};
+
+  cv.style.touchAction="pan-y"; cv.style.cursor="grab";
+  cv.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,lon:lon0,lat:lat0,moved:false}; try{cv.setPointerCapture(e.pointerId);}catch(_){} cv.style.cursor="grabbing";});
+  cv.addEventListener("pointermove",e=>{const r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+    if(drag){const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.abs(dx)+Math.abs(dy)>5) drag.moved=true;
+      lon0=drag.lon-dx*0.4; if(e.pointerType==="mouse") lat0=Math.max(-45,Math.min(65,drag.lat+dy*0.3));}
+    else if(mode==="map"){hover=pinAt(x,y); cv.style.cursor=hover&&!S.done[hover.id]?"pointer":"grab";}
+    if(reduce) draw(performance.now());});
+  cv.addEventListener("pointerup",e=>{if(!drag) return; const r=cv.getBoundingClientRect(), wasClick=!drag.moved; drag=null; idleAt=performance.now(); cv.style.cursor="grab";
+    if(wasClick && mode==="map"){const d=pinAt(e.clientX-r.left,e.clientY-r.top); if(d && !S.done[d.id]) startDest(d.id);}});
+  cv.addEventListener("pointercancel",()=>{drag=null; idleAt=performance.now();});
+  cv.addEventListener("pointerleave",()=>{hover=null; if(reduce) draw(performance.now());});
+
+  function draw(now){
+    const dt=Math.min(64,now-last); last=now;
+    if(!reduce && !drag && now-idleAt>1400) lon0+=dt*0.0045;
+    ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2;
+    // atmosphere
+    let g=ctx.createRadialGradient(cx,cy,R*.92,cx,cy,R*1.45); g.addColorStop(0,"rgba(83,227,255,.34)"); g.addColorStop(.35,"rgba(90,110,255,.12)"); g.addColorStop(1,"rgba(83,227,255,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R*1.45,0,7); ctx.fill();
+    // ocean
+    g=ctx.createRadialGradient(cx-R*.4,cy-R*.45,R*.05,cx,cy,R); g.addColorStop(0,"#1d3478"); g.addColorStop(.55,"#0c1640"); g.addColorStop(1,"#040714");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+    // graticule
+    for(let la=-60;la<=60;la+=30){const p=[]; for(let lo=-180;lo<=180;lo+=4) p.push({lat:la,lon:lo}); line(p,la===0?"rgba(83,227,255,.16)":"rgba(83,227,255,.07)",.8);}
+    for(let lo=-180;lo<180;lo+=30){const p=[]; for(let la=-90;la<=90;la+=4) p.push({lat:la,lon:lo}); line(p,"rgba(83,227,255,.07)",.8);}
+    // land
+    ctx.fillStyle="#c6ecff";
+    for(const p of pts){const q=P(p.lat,p.lon); if(q.v>0){const sz=.8+1.25*q.v; ctx.globalAlpha=.16+.78*q.v; ctx.fillRect(q.x-sz/2,q.y-sz/2,sz,sz);}}
+    ctx.globalAlpha=1;
+    // shading: sun glint + limb darkening
+    g=ctx.createRadialGradient(cx-R*.42,cy-R*.48,0,cx-R*.42,cy-R*.48,R*.95); g.addColorStop(0,"rgba(255,255,255,.13)"); g.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+    g=ctx.createRadialGradient(cx,cy,R*.68,cx,cy,R); g.addColorStop(0,"rgba(2,4,12,0)"); g.addColorStop(1,"rgba(2,4,12,.5)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+    ctx.strokeStyle="rgba(120,235,255,.65)"; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
+    // routes
+    arcs.forEach(a=>{line(a,"rgba(255,194,61,.22)",5); line(a,"#ffc23d",1.7,[5,5], reduce?0:-(now/40));});
+    if(preview) line(preview,"rgba(83,227,255,.55)",1.2,[2,6], reduce?0:-(now/60));
+    if(!reduce && arcs.length){const a=arcs[arcs.length-1], k=Math.floor((now/26)%(a.length+30));
+      if(k<a.length){const p=a[k], q=P(p.lat,p.lon); if(q.v>-0.02){const x=W/2+(q.x-W/2)*p.lift, y=H/2+(q.y-H/2)*p.lift;
+        ctx.fillStyle="#ffffff"; ctx.shadowColor="#ffc23d"; ctx.shadowBlur=16; ctx.beginPath(); ctx.arc(x,y,2.8,0,7); ctx.fill(); ctx.shadowBlur=0;}}}
+    // home
+    const h=P(HOME.lat,HOME.lon);
+    if(h.v>0){ctx.fillStyle="#53e3ff"; ctx.shadowColor="#53e3ff"; ctx.shadowBlur=10; ctx.beginPath(); ctx.arc(h.x,h.y,3.2,0,7); ctx.fill(); ctx.shadowBlur=0;
+      if(mode==="map") label("SJO",h,"#53e3ff");}
+    // destinations
+    DESTS.forEach(d=>{const q=P(d.lat,d.lon); if(q.v<=0) return; const on=!!S.done[d.id], nx=nextD&&nextD.id===d.id;
+      ctx.globalAlpha=Math.min(1,.3+q.v*1.3);
+      if(on){ctx.shadowColor=d.color; ctx.shadowBlur=16; ctx.fillStyle=d.color; ctx.beginPath(); ctx.arc(q.x,q.y,5,0,7); ctx.fill(); ctx.shadowBlur=0;
+        ctx.strokeStyle="#ffffff"; ctx.lineWidth=1; ctx.stroke();}
+      else{const ph=reduce?0:((now/(nx?900:1500))%1);
+        ctx.strokeStyle=d.color; ctx.globalAlpha*=1-ph; ctx.lineWidth=nx?2:1.3; ctx.beginPath(); ctx.arc(q.x,q.y,4+ph*(nx?16:11),0,7); ctx.stroke();
+        ctx.globalAlpha=Math.min(1,.3+q.v*1.3); ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(q.x,q.y,nx?3.4:2.6,0,7); ctx.fill();
+        ctx.strokeStyle=d.color; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(q.x,q.y,nx?5.5:4.2,0,7); ctx.stroke();}
+      if(mode==="map"){ if(hover&&hover.id===d.id) pill(`${d.name}${on?" · landed":" · tap to board"}`, q.x+10, q.y-14, d.color); else label(d.code,q,on?d.color:"rgba(238,241,255,.85)"); }
+      ctx.globalAlpha=1;});
+    if(mode==="cover"){const a=reduce?0.9:now/2600; ctx.save(); ctx.translate(cx,cy); ctx.rotate(-.35);
+      ctx.strokeStyle="rgba(255,194,61,.4)"; ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(0,0,R*1.24,R*.34,0,0,Math.PI); ctx.stroke(); ctx.setLineDash([]);
+      const sn=Math.sin(a); if(sn>0){ctx.fillStyle="#ffc23d"; ctx.shadowColor="#ffc23d"; ctx.shadowBlur=18; ctx.beginPath(); ctx.arc(R*1.24*Math.cos(a),R*.34*sn,3.6,0,7); ctx.fill(); ctx.shadowBlur=0;}
+      ctx.restore();}
+  }
+  function loop(now){ if(!document.body.contains(cv)) return; draw(now); requestAnimationFrame(loop); }
+  if(reduce) draw(performance.now()); else requestAnimationFrame(loop);
+}
+function boarding(d, done){
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches, i=DESTS.indexOf(d), dur=reduce?.6:2;
+  const ov=document.createElement("div"); ov.className="boarding";
+  ov.innerHTML=`<div class="board-card"><div class="label">Now boarding · Gate G${i+1} · Flight WP ${101+i}</div>
+    <div class="route"><div><b>SJO</b><span>San José</span></div>
+      <svg class="arc" viewBox="0 0 300 90" aria-hidden="true"><path id="bpath" class="trail" d="M8 82 Q150 -24 292 82"/>
+        <g><g transform="rotate(90) translate(-12 -12)"><path class="plane" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></g>
+        <animateMotion dur="${dur}s" fill="freeze" rotate="auto"><mpath href="#bpath"/></animateMotion></g></svg>
+      <div><b>${esc(d.code)}</b><span>${esc(d.city)}</span></div></div>
+    <h2>${flap(d.name)}</h2><div class="counter">Tap anywhere to skip</div></div>`;
+  document.body.appendChild(ov); sfx("whoosh");
+  if(!reduce) ov.querySelectorAll(".flap").forEach(scramble);
+  let fin=false;
+  const go=()=>{if(fin) return; fin=true; done(); ov.classList.add("out"); setTimeout(()=>ov.remove(),320);};
+  ov.onclick=go; setTimeout(go, reduce?800:2400);
+}
+let fxKey="";
+function fx(doFlap){
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(doFlap && !reduce) document.querySelectorAll("#app .flap").forEach(scramble);
+  document.querySelectorAll("#app canvas.globe").forEach(c=>globe(c,reduce));
+}
+
+/* ---------------- VIEWS ---------------- */
+function render(){
+  const v={cover:viewCover,brief:viewBrief,map:viewMap,dest:viewDest,final:viewFinal,cert:viewCert}[S.view]; if(v) v();
+  const key=S.view+"|"+S.cur+"|"+S.step;
+  if(key!==fxKey){$app.classList.remove("enter"); void $app.offsetWidth; $app.classList.add("enter");}
+  fx(key!==fxKey); fxKey=key;
+}
+
+function viewCover(){
+  $app.innerHTML = `<div class="cover-stage"><div class="globe-wrap"><canvas class="globe" data-mode="cover" aria-hidden="true"></canvas></div>
+   <div class="cover">
+    <svg class="crest" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="50" cy="50" r="44"/><ellipse cx="50" cy="50" rx="18" ry="44"/><path d="M6 50h88M12 30h76M12 70h76"/></g></svg>
+    <div class="sub">PASSPORT · PASAPORTE · PASSEPORT</div>
+    <h1>World<br>Passport</h1>
+    <p>Nine cultures. Six continents. One passport. At each stop, read the field notes, clear customs, and earn your stamp.</p>
+    <label for="nm" class="sub">Bearer’s name</label>
+    <input id="nm" maxlength="28" placeholder="First and last name" autocomplete="off">
+    <button class="btn" id="go">Issue my passport</button>
+    <div class="fine">Departing SJO · San José · about 35 minutes</div>
+   </div></div>`;
+  const nm=document.getElementById("nm"), go=document.getElementById("go");
+  const start=()=>{const v=nm.value.trim(); if(v.length<2){nm.focus(); nm.placeholder="Please type your name"; return;}
+    S.name=v; S.started=Date.now(); S.view="brief"; S.brief=null; sfx("pair"); save(); render();};
+  go.onclick=start; nm.onkeydown=e=>{if(e.key==="Enter")start();};
+}
+
+function viewMap(){
+  const n=Object.keys(S.done).length, nextId=order().find(id=>!S.done[id]);
+  const title = n===0?"Where to first?":n<DESTS.length?"Pick your next flight":"All visas stamped";
+  $app.innerHTML = bar()+ticker()+`<section class="hero"><div class="globe-col"><div class="globe-wrap"><canvas class="globe" data-mode="map" aria-hidden="true"></canvas></div><div class="globe-hint">Drag to spin · tap a pin to board</div></div>
+    <div class="intro"><span class="label">Departures · Terminal G · SJO</span><h2>${flap(title)}</h2>
+    <p>Your next departure is highlighted, but you may fly anywhere in any order. Read carefully: the field notes hold every answer, and peeking back at them during challenges cuts your points in half.</p>
+    <div class="counter">${pace()}</div><div class="legend"><span><i class="pin on"></i>Visited</span><span><i class="pin"></i>Not yet visited</span><span><i class="pin home"></i>Home: San José</span></div></div></section>
+    <div class="visas">${order().map(dest).map(d=>{const i=DESTS.indexOf(d), dn=S.done[d.id], nx=d.id===nextId;
+      return `<button class="visa ${dn?"done":""} ${nx?"next":""}" data-id="${d.id}" ${dn?'aria-disabled="true"':""} style="${motifStyle(d)}">
+        <div class="pass-main"><div class="pass-top"><span>WP ${101+i}</span><span>SJO ✈ ${esc(d.code)}</span></div>
+          ${nx?'<span class="nextbadge">● Next departure</span>':""}<span class="region">${esc(d.region)}</span><h3>${esc(d.name)}</h3><span class="hello">“${esc(d.phrase.say)}”</span>
+          <span class="teaser">${dn? "Stamped · "+dn.score+" / "+MAX_DEST+" pts" : esc(d.teaser)}</span>
+          <div class="pass-meta"><div><span class="label">Gate</span><b>G${i+1}</b></div><div><span class="label">Arrive</span><b>${esc(d.city)}</b></div>
+            <div><span class="label">Status</span><b class="${dn?"landed":"board"}">${dn?"Landed":"Boarding"}</b></div></div><span class="motif-name">Pattern · ${esc(motif(d).name)}</span></div>
+        <div class="pass-stub"><span class="slot">${dn? stamp(d,gradeOf(dn.score),true) : "STAMP"}</span><span class="barcode"></span></div></button>`;}).join("")}</div>
+    <div class="final-card"><div><span class="label">Final checkpoint</span>
+      <h3>Border control</h3><div style="color:var(--muted);font-size:.95rem">${FINAL_N} mixed questions from all your travels. Unlocks after all ${DESTS.length} stamps.</div></div>
+      <button class="btn" id="fin" ${n<DESTS.length?"disabled":""}>${n<DESTS.length?`${DESTS.length-n} stamps to go`:"Begin exam"}</button></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost small" id="reset">Not your passport? Start over</button></div>`;
+  $app.querySelectorAll(".visa:not(.done)").forEach(b=>b.onclick=()=>startDest(b.dataset.id));
+  const f=document.getElementById("fin"); if(n>=DESTS.length) f.onclick=startFinal;
+  const rs=document.getElementById("reset"); let armed=false;
+  rs.onclick=()=>{ if(!armed){armed=true; rs.textContent="Tap again to erase all stamps"; return;} S=freshState(); save(); render(); };
+}
+
+function startDest(id){
+  const d=dest(id);
+  S.cur=id; S.step=0; S.view="dest";
+  S.run={readStart:Date.now(), peeked:false, score:0, qi:0, qAns:null,
+    qList:shuffle(d.quiz.map((q,i)=>i)),
+    mTerms:shuffle(d.match.map(p=>p[0])), mDefs:shuffle(d.match.map(p=>p[1])), mLocked:[], mSel:null, mPts:0, mMiss:0,
+    cOrder:shuffle(d.scenario.o.map(x=>({t:x[0],ok:x[1],fb:x[2]}))), cAns:null, postcard:""};
+  S.run.qOrder=S.run.qList.map(k=>{const q=d.quiz[k]; return shuffle(q.o.map((t,i)=>({t,ok:i===q.a})));});
+  save(); boarding(d,()=>{render(); window.scrollTo(0,0);});
+}
+
+function stepsBar(){
+  return `<div class="steps">${STEPS.map((s,i)=>`<span class="${i===S.step?"on":i<S.step?"past":""}">${STEP_LABEL[s]}</span>`).join("")}</div>`;
+}
+function head(d){
+  const i=DESTS.indexOf(d);
+  return `<div class="doc-head"><div><div class="label">Flight WP ${101+i} · SJO ✈ ${esc(d.code)} · ${esc(d.region)}</div><h2>${flap(d.name)}</h2></div>${stepsBar()}</div>`;
+}
+function notesHTML(d){
+  return `<p class="lead">${esc(d.lead)}</p>
+    <div class="phrase" style="${motifStyle(d)}"><span class="label">Say it in ${esc(d.phrase.lang)}</span><span class="say">${esc(d.phrase.say)}</span><span>${esc(d.phrase.means)}</span></div>
+    <div class="notes">${d.notes.map(n=>`<div class="note"><h3>${esc(n.h)}</h3><p>${esc(n.t)}</p></div>`).join("")}</div>`;
+}
+function peekBtn(){return `<button class="btn ghost" id="peek">${S.run.peeked?"Reopen field notes":"Peek at field notes (half points)"}</button>`;}
+
+function viewDest(){
+  const d=dest(S.cur), st=STEPS[S.step], R=S.run;
+  let body="";
+  if(st==="notes"){
+    body = notesHTML(d)+`<div class="row"><button class="btn" id="next" disabled>Read the notes…</button>
+      <span class="counter" id="rc"></span></div>`;
+  }
+  if(st==="quiz"){
+    const q=d.quiz[R.qList?R.qList[R.qi]:R.qi], opts=R.qOrder[R.qi], ans=R.qAns;
+    body = `<div class="q"><div class="counter">Question ${R.qi+1} of ${d.quiz.length} · worth ${R.peeked?PTS.mc/2:PTS.mc} pts</div>
+      <div class="prompt">${esc(q.q)}</div>
+      <div class="opts">${opts.map((o,i)=>{let c=""; if(ans!==null){if(o.ok)c="right"; else if(i===ans)c="wrong";}
+        return `<button class="opt ${c}" data-i="${i}" ${ans!==null?"disabled":""}><span class="k">${"ABCD"[i]}</span><span>${esc(o.t)}</span></button>`;}).join("")}</div>
+      ${ans!==null?`<div class="why ${opts[ans].ok?"ok":"no"}"><b>${opts[ans].ok?"Correct":"Not quite"}</b><br>${esc(q.why)}</div>
+        <div class="row"><button class="btn" id="next">${R.qi<d.quiz.length-1?"Next question":"On to matching"}</button></div>`
+        :`<div class="row">${peekBtn()}</div>`}</div>`;
+  }
+  if(st==="match"){
+    const all=R.mLocked.length===d.match.length;
+    body = `<div class="q"><div class="prompt">Match each word to its meaning.</div>
+      <div class="counter">Tap a word, then its meaning. ${PTS.pair} pts per pair, −${PTS.pairMiss} for each wrong try.</div>
+      <div class="match"><div class="col">${R.mTerms.map(t=>`<button class="tile term ${R.mLocked.includes(t)?"locked":""} ${R.mSel===t?"sel":""}" data-t="${esc(t)}" ${R.mLocked.includes(t)?"disabled":""}>${esc(t)}</button>`).join("")}</div>
+      <div class="col">${R.mDefs.map(m=>{const lk=R.mLocked.some(t=>d.match.find(p=>p[0]===t)[1]===m);
+        return `<button class="tile def ${lk?"locked":""}" data-m="${esc(m)}" ${lk?"disabled":""}>${esc(m)}</button>`;}).join("")}</div></div>
+      <div class="row">${all?`<span class="counter">Matching complete: +${R.mPts} pts</span><button class="btn" id="next">On to customs</button>`:""}</div></div>`;
+  }
+  if(st==="customs"){
+    const sc=d.scenario, ans=R.cAns;
+    body = `<div class="q"><div class="label">Customs officer’s question · worth ${R.peeked?PTS.customs/2:PTS.customs} pts</div>
+      <div class="prompt">${esc(sc.q)}</div>
+      <div class="opts">${R.cOrder.map((o,i)=>{let c=""; if(ans!==null){if(o.ok)c="right"; else if(i===ans)c="wrong";}
+        return `<button class="opt ${c}" data-i="${i}" ${ans!==null?"disabled":""}><span class="k">${"ABC"[i]}</span><span>${esc(o.t)}</span></button>`;}).join("")}</div>
+      ${ans!==null?`<div class="why ${R.cOrder[ans].ok?"ok":"no"}"><b>${R.cOrder[ans].ok?"Cleared":"Reconsider"}</b><br>${esc(R.cOrder[ans].fb)}${R.cOrder[ans].ok?"":" "+esc(R.cOrder.find(o=>o.ok).fb)}</div>
+        <div class="row"><button class="btn" id="next">Write your postcard</button></div>`:`<div class="row">${peekBtn()}</div>`}</div>`;
+  }
+  if(st==="postcard"){
+    body = `<div class="q"><div class="prompt">Send a postcard home</div>
+      <p style="margin:0;max-width:65ch">Write to a friend: what is one custom from ${esc(d.name)} that is different from your own culture, and one that is similar? (At least 20 characters.)</p>
+      <div class="postcard"><textarea id="pc" maxlength="400" placeholder="Dear friend, today in ${esc(d.name)} I learned…">${esc(R.postcard)}</textarea>
+        <div class="side"><div class="postage" style="--dc:${d.color}"><b style="font-size:${d.emblem.length>6?'.78rem':'1.05rem'}">${esc(d.emblem)}</b><small>${esc(d.name)}</small></div><span class="label">To</span><span class="mono">A friend back home</span><span class="label">From</span><span class="mono">${esc(S.name)}</span><span class="label">Postage paid</span><span class="mono">+${PTS.postcard} pts</span></div></div>
+      <div class="row"><button class="btn" id="next" disabled>Mail it and get my stamp</button><span class="counter" id="pcc"></span></div></div>`;
+  }
+  if(st==="stamp"){
+    const g=gradeOf(R.score);
+    body = `<div class="reveal"><div class="thump">${stamp(d,g)}</div>
+      <h2>${g==="gold"?"Entry with distinction":g==="pass"?"Entry granted":"Provisional entry"}</h2>
+      <div class="mono" style="font-size:1.2rem">${R.score} / ${MAX_DEST} pts</div>
+      <p style="margin:0;max-width:50ch;color:var(--muted)">${g==="gold"?"You know this culture well. Safe travels!":g==="pass"?"Solid visit. You understood most of what you saw.":"You made it in, but review the field notes for this one before the border exam."}</p>
+      <div class="fact"><span class="label">Souvenir fact · ${esc(d.name)}</span><p>${esc(d.fact)}</p></div>
+      <button class="btn" id="next">Back to departures</button></div>`;
+  }
+  $app.innerHTML = bar()+`<div class="doc" style="--dc:${d.color}">${head(d)}${body}</div>`;
+  wireDest(d, st);
+}
+
+function addPts(n){S.run.score+=n;}
+
+function wireDest(d, st){
+  const R=S.run, next=document.getElementById("next"), peek=document.getElementById("peek");
+  if(peek) peek.onclick=()=>openNotes(d);
+  if(st==="notes"){
+    const rc=document.getElementById("rc");
+    const tick=()=>{const left=READ_SECONDS-Math.floor((Date.now()-R.readStart)/1000);
+      if(!document.body.contains(next)) return;
+      if(left<=0){next.disabled=false; next.textContent="I’m ready for customs"; rc.textContent="";}
+      else{rc.textContent=`Read carefully · unlocks in ${left}s`; setTimeout(tick,500);}};
+    tick();
+    next.onclick=()=>{S.step=1; save(); render(); window.scrollTo(0,0);};
+  }
+  if(st==="quiz"){
+    $app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+      if(R.qAns!==null) return; const i=+b.dataset.i; R.qAns=i;
+      const ok=R.qOrder[R.qi][i].ok; if(ok) addPts(R.peeked?PTS.mc/2:PTS.mc); answered(ok);
+      save(); render();});
+    if(next) next.onclick=()=>{R.qAns=null; if(R.qi<d.quiz.length-1){R.qi++;} else {S.step=2;} save(); render();};
+  }
+  if(st==="match"){
+    $app.querySelectorAll(".tile.term:not(.locked)").forEach(b=>b.onclick=()=>{R.mSel=b.dataset.t; render();});
+    $app.querySelectorAll(".tile.def:not(.locked)").forEach(b=>b.onclick=()=>{
+      if(!R.mSel){b.classList.add("shake"); setTimeout(()=>b.classList.remove("shake"),400); return;}
+      const pair=d.match.find(p=>p[0]===R.mSel);
+      if(pair[1]===b.dataset.m){R.mLocked.push(R.mSel); R.mSel=null; sfx("pair");
+        if(R.mLocked.length===d.match.length){R.mPts=Math.max(0,d.match.length*PTS.pair-R.mMiss*PTS.pairMiss); addPts(R.mPts);}
+        save(); render();}
+      else{R.mMiss++; sfx("wrong"); b.classList.add("shake"); setTimeout(()=>b.classList.remove("shake"),400);}
+    });
+    if(next) next.onclick=()=>{S.step=3; save(); render();};
+  }
+  if(st==="customs"){
+    $app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+      if(R.cAns!==null) return; const i=+b.dataset.i; R.cAns=i;
+      const ok=R.cOrder[i].ok; if(ok) addPts(R.peeked?PTS.customs/2:PTS.customs); answered(ok);
+      save(); render();});
+    if(next) next.onclick=()=>{S.step=4; save(); render();};
+  }
+  if(st==="postcard"){
+    const pc=document.getElementById("pc"), pcc=document.getElementById("pcc");
+    const upd=()=>{R.postcard=pc.value; const n=pc.value.trim().length; next.disabled=n<20; pcc.textContent=n<20?`${20-n} more characters`:""; save();};
+    pc.oninput=upd; upd();
+    next.onclick=()=>{addPts(PTS.postcard); S.done[d.id]={score:R.score, postcard:R.postcard.trim()}; S.step=5; save(); render(); window.scrollTo(0,0);
+      setTimeout(()=>{sfx("stamp"); confetti(d.color, gradeOf(R.score)==="gold");},150);};
+  }
+  if(st==="stamp"){
+    next.onclick=()=>{S.view="map"; S.cur=null; S.run=null; save(); render(); window.scrollTo(0,0);};
+  }
+}
+
+function openNotes(d){
+  S.run.peeked=true; save();
+  const ov=document.createElement("div"); ov.className="overlay";
+  ov.innerHTML=`<div class="doc" role="dialog" aria-label="Field notes" style="--dc:${d.color}"><div class="doc-head"><h2>Field notes: ${esc(d.name)}</h2>
+    <button class="btn" id="cl">Close notes</button></div>${notesHTML(d)}</div>`;
+  document.body.appendChild(ov);
+  const close=()=>{ov.remove(); render();};
+  ov.querySelector("#cl").onclick=close; ov.onclick=e=>{if(e.target===ov)close();};
+  ov.querySelector("#cl").focus();
+}
+
+/* ---------------- FINAL EXAM ---------------- */
+function startFinal(){
+  const pool=[];
+  DESTS.forEach(d=>d.match.forEach(p=>pool.push({kind:"term",d,term:p[0],mean:p[1]})));
+  DESTS.forEach(d=>pool.push({kind:"phrase",d}));
+  const where=shuffle(pool).slice(0,FINAL_N-COMPARE.length).map(it=>{
+    const others=shuffle(DESTS.filter(x=>x.id!==it.d.id)).slice(0,3);
+    const opts=shuffle([it.d,...others]).map(x=>({t:x.name,ok:x.id===it.d.id}));
+    const q= it.kind==="term" ? `Where would you most likely encounter “${it.term}” (${it.mean.charAt(0).toLowerCase()+it.mean.slice(1)})?`
+      : `Someone greets you with “${it.d.phrase.say}.” Where are you?`;
+    return {q,opts,tag:"Identify the culture",why: it.kind==="term"? `${it.term} comes from ${it.d.name}.` : `“${it.d.phrase.say}” is ${it.d.phrase.lang} for “${it.d.phrase.means}.”`};
+  });
+  const cmp=COMPARE.map(c=>({q:c.q, tag:"Compare cultures", why:c.why, opts:shuffle(c.o.map((t,i)=>({t,ok:i===0})))}));
+  S.final={qs:shuffle([...where,...cmp]), i:0, ans:null, score:0, finished:false, startedAt:Date.now()};
+  S.view="final"; save(); sfx("whoosh"); render(); window.scrollTo(0,0);
+}
+function viewFinal(){
+  const F=S.final, q=F.qs[F.i], ans=F.ans;
+  $app.innerHTML = bar()+`<div class="doc"><div class="doc-head"><div><div class="label">Final checkpoint · All flights</div><h2>${flap("Border control")}</h2></div>
+    <div class="mono" style="font-variant-numeric:tabular-nums">${F.i+1} / ${F.qs.length} · ${F.score} pts</div></div>
+    <div class="q"><div class="label qtag">${esc(q.tag||"Identify the culture")}</div><div class="prompt">${esc(q.q)}</div>
+    <div class="opts">${q.opts.map((o,i)=>{let c=""; if(ans!==null){if(o.ok)c="right"; else if(i===ans)c="wrong";}
+      return `<button class="opt ${c}" data-i="${i}" ${ans!==null?"disabled":""}><span class="k">${"ABCD"[i]}</span><span>${esc(o.t)}</span></button>`;}).join("")}</div>
+    ${ans!==null?`<div class="why ${q.opts[ans].ok?"ok":"no"}"><b>${q.opts[ans].ok?"Correct":"Not quite"}</b><br>${esc(q.why)}</div>
+      <div class="row"><button class="btn" id="next">${F.i<F.qs.length-1?"Next question":"Receive my certificate"}</button></div>`:""}</div></div>`;
+  $app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{if(F.ans!==null)return; F.ans=+b.dataset.i; if(q.opts[F.ans].ok)F.score+=PTS.final; answered(q.opts[F.ans].ok); save(); render();});
+  const n=document.getElementById("next");
+  if(n) n.onclick=()=>{F.ans=null; if(F.i<F.qs.length-1){F.i++;} else {F.finished=true; F.endedAt=Date.now(); S.view="cert"; setTimeout(()=>{sfx("win"); confetti("#ffd66b",true);},150);} save(); render(); window.scrollTo(0,0);};
+}
+
+/* ---------------- CERTIFICATE ---------------- */
+function viewCert(){
+  const max=DESTS.length*MAX_DEST + FINAL_N*PTS.final, tot=totalScore(), pct=Math.min(100,Math.round(tot/max*100));
+  const rank = pct>=90?"Cultural Ambassador":pct>=75?"Seasoned Explorer":pct>=55?"Curious Traveler":"First-time Tourist";
+  const time = fmt((S.final.endedAt||Date.now())-S.started);
+  const nm = S.name.toUpperCase().replace(/[^A-Z ]/g,"").trim().split(/\s+/);
+  const last = (nm.length>1?nm[nm.length-1]:nm[0]||"TRAVELER"), first=nm.length>1?nm.slice(0,-1).join("<"):"";
+  const pad=(s,n)=>(s+"<".repeat(n)).slice(0,n);
+  const mrz1=pad(`P<WLD${last}<<${first}`,44);
+  const mrz2=pad(`WP${String(tot).padStart(5,"0")}<${pct}PCT<${Object.keys(S.done).length}STAMPS<${time.replace(":","M")}S`,44);
+  $app.innerHTML = `<div class="cert">
+    <div class="doc-head" style="border-color:var(--gold)"><div><div class="label">Certificate of travel</div><h2>${flap(S.name)}</h2></div>
+      <div style="text-align:right"><div class="label">Rank</div><div style="font-family:var(--f-display);font-weight:800;font-size:1.6rem;text-transform:uppercase;color:var(--amber)">${rank}</div></div></div>
+    <div class="row" style="gap:28px">
+      <div class="stat"><span class="label">Total points</span><b>${tot.toLocaleString()} / ${max.toLocaleString()}</b></div>
+      <div class="stat"><span class="label">Score</span><b>${pct}%</b></div>
+      <div class="stat"><span class="label">Border exam</span><b>${S.final.score/PTS.final} / ${FINAL_N}</b></div>
+      <div class="stat"><span class="label">Travel time</span><b>${time}</b></div>
+      <div class="stat"><span class="label">Accuracy</span><b>${S.right||0} / ${S.asked||0}</b></div>
+      <div class="stat"><span class="label">Best streak</span><b>${S.best||0}</b></div></div>
+    <div class="cert-grid">${DESTS.map(d=>stamp(d,gradeOf(S.done[d.id].score),true)).join("")}</div>
+    <div class="tblwrap"><table class="tally"><thead><tr><th>Destination</th><th>Region</th><th style="text-align:right">Points</th></tr></thead><tbody>
+      ${DESTS.map(d=>`<tr><td><i class="sw" style="background:${d.color}"></i>${esc(d.name)}</td><td>${esc(d.region)}</td><td class="n">${S.done[d.id].score} / ${MAX_DEST}</td></tr>`).join("")}
+      <tr><td>Tailwind streak bonus</td><td>All</td><td class="n">+${S.bonus||0}</td></tr>
+      <tr><td>Border exam</td><td>All</td><td class="n">${S.final.score} / ${FINAL_N*PTS.final}</td></tr></tbody></table></div>
+    <div><div class="label" style="margin-bottom:8px">Postcards sent</div><div class="cards">
+      ${DESTS.map(d=>`<div class="pc"><div class="label">${esc(d.name)}</div>${esc(S.done[d.id].postcard)}</div>`).join("")}</div></div>
+    <div class="mrz" aria-label="Machine readable zone">${esc(mrz1)}\n${esc(mrz2)}</div>
+    <p style="margin:0;color:var(--muted)">Show this screen to your teacher.</p>
+    <div class="row"><button class="btn ghost" id="again">Start a new passport</button><span class="counter" id="conf"></span></div>
+  </div>`;
+  const a=document.getElementById("again"); let armed=false;
+  a.onclick=()=>{ if(!armed){armed=true; a.textContent="Tap again to erase this passport"; document.getElementById("conf").textContent="This clears all stamps and postcards."; return;}
+    S=freshState(); save(); render(); };
+}
+
+/* ---------------- FUN: sound, toasts, confetti, streaks ---------------- */
+const SND={on:true}; try{SND.on=localStorage.getItem("wp-sound")!=="off";}catch(e){}
+let AC=null;
+function sfx(kind){
+  if(!SND.on) return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended") AC.resume();
+    const t=AC.currentTime;
+    const tone=(f,st,dur,type,vol,f2)=>{const o=AC.createOscillator(), g=AC.createGain(); o.type=type||"sine"; o.frequency.setValueAtTime(f,t+st);
+      if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+st+dur); g.gain.setValueAtTime(0.0001,t+st); g.gain.exponentialRampToValueAtTime(vol||.12,t+st+.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+st+dur); o.connect(g).connect(AC.destination); o.start(t+st); o.stop(t+st+dur+.05);};
+    const noise=(st,dur,vol,f1,f2)=>{const b=AC.createBuffer(1,Math.floor(AC.sampleRate*dur),AC.sampleRate), d=b.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const src=AC.createBufferSource(); src.buffer=b; const fl=AC.createBiquadFilter();
+      fl.type="bandpass"; fl.Q.value=1.2; fl.frequency.setValueAtTime(f1,t+st); fl.frequency.exponentialRampToValueAtTime(f2,t+st+dur);
+      const g=AC.createGain(); g.gain.setValueAtTime(vol,t+st); g.gain.exponentialRampToValueAtTime(0.0001,t+st+dur); src.connect(fl).connect(g).connect(AC.destination); src.start(t+st);};
+    if(kind==="right"){tone(660,0,.14,"triangle"); tone(990,.1,.22,"triangle");}
+    if(kind==="wrong"){tone(190,0,.3,"sawtooth",.05,120);}
+    if(kind==="pair"){tone(880,0,.12,"sine",.1);}
+    if(kind==="streak"){tone(660,0,.1,"triangle"); tone(880,.08,.1,"triangle"); tone(1320,.16,.28,"triangle");}
+    if(kind==="stamp"){noise(0,.18,.5,1800,200); tone(90,0,.25,"sine",.35,50);}
+    if(kind==="whoosh"){noise(0,1.5,.16,300,3000);}
+    if(kind==="win"){[523,659,784,1047].forEach((f,i)=>tone(f,i*.12,.35,"triangle",.12));}
+  }catch(e){}
+}
+document.addEventListener("click",e=>{const b=e.target.closest("#snd"); if(!b) return;
+  SND.on=!SND.on; try{localStorage.setItem("wp-sound",SND.on?"on":"off");}catch(_){}
+  b.setAttribute("aria-pressed",SND.on); b.textContent=SND.on?"Sound on":"Sound off"; if(SND.on) sfx("pair");});
+function toast(main, small){
+  const t=document.createElement("div"); t.className="toast"; t.setAttribute("role","status");
+  t.innerHTML=`${esc(main)}${small?`<small>${esc(small)}</small>`:""}`; document.body.appendChild(t); setTimeout(()=>t.remove(),2000);
+}
+function confetti(color, big){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv=document.createElement("canvas"); cv.className="confetti"; document.body.appendChild(cv);
+  const ctx=cv.getContext("2d"), dpr=Math.min(2,window.devicePixelRatio||1), W=innerWidth, H=innerHeight;
+  cv.width=W*dpr; cv.height=H*dpr; ctx.scale(dpr,dpr);
+  const cols=[color,"#ffc23d","#53e3ff","#ffffff","#ff7ad9"];
+  const ps=Array.from({length:big?180:90},()=>({x:W/2,y:H*.36,vx:(Math.random()-.5)*15,vy:-Math.random()*13-4,r:Math.random()*3,vr:(Math.random()-.5)*.4,
+    w:5+Math.random()*6,h:3+Math.random()*4,c:cols[Math.random()*cols.length|0]}));
+  const t0=performance.now();
+  (function f(now){const t=now-t0; ctx.clearRect(0,0,W,H);
+    ps.forEach(p=>{p.vy+=.35; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
+      ctx.globalAlpha=Math.max(0,1-t/2200); ctx.fillStyle=p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();});
+    if(t<2200) requestAnimationFrame(f); else cv.remove();})(t0);
+}
+/* ---------------- TICKET MOTIFS: one traditional pattern per culture ---------------- */
+const svgTile=(w,h,body)=>`url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${body}</svg>`)}')`;
+const KORU=(()=>{let d="M18 64 C18 50 22 42 30 36"; const cx=34, cy=26; for(let t=0;t<=4*Math.PI;t+=.25){const r=12-t*.85; d+=` L${(cx+r*Math.cos(t+Math.PI*.75)).toFixed(1)} ${(cy+r*Math.sin(t+Math.PI*.75)).toFixed(1)}`;} return d;})();
+const MOTIFS={
+  japan:{name:"Seigaiha (ocean waves)", w:40,h:20, svg:c=>{const wv=(x,y)=>`<g transform="translate(${x} ${y})"><circle r="19" fill="#121c44" stroke="${c}" stroke-opacity=".6"/><circle r="14" fill="none" stroke="${c}" stroke-opacity=".45"/><circle r="9" fill="none" stroke="${c}" stroke-opacity=".38"/><circle r="4" fill="none" stroke="${c}" stroke-opacity=".3"/></g>`; return wv(20,0)+wv(0,10)+wv(40,10)+wv(20,20);}},
+  india:{name:"Rangoli (floor art)", w:56,h:56, svg:c=>{let b=`<circle cx="28" cy="28" r="22" fill="none" stroke="${c}" stroke-opacity=".35" stroke-dasharray="1.5 4"/>`;
+    for(let k=0;k<8;k++) b+=`<ellipse cx="28" cy="16" rx="3.6" ry="9" fill="none" stroke="${c}" stroke-opacity=".55" transform="rotate(${k*45} 28 28)"/>`;
+    return b+`<circle cx="28" cy="28" r="3" fill="${c}" fill-opacity=".6"/><circle cx="0" cy="0" r="2" fill="${c}" fill-opacity=".5"/><circle cx="56" cy="56" r="2" fill="${c}" fill-opacity=".5"/><circle cx="56" cy="0" r="2" fill="${c}" fill-opacity=".5"/><circle cx="0" cy="56" r="2" fill="${c}" fill-opacity=".5"/>`;}},
+  morocco:{name:"Zellige (star tilework)", w:40,h:40, svg:c=>`<g fill="none" stroke="${c}" stroke-opacity=".55" stroke-width="1.2"><rect x="11" y="11" width="18" height="18"/><rect x="11" y="11" width="18" height="18" transform="rotate(45 20 20)"/><circle cx="20" cy="20" r="4"/><path d="M0 0 L6 6 M40 0 L34 6 M0 40 L6 34 M40 40 L34 34"/><rect x="-4" y="-4" width="8" height="8" transform="rotate(45 0 0)"/><rect x="36" y="-4" width="8" height="8" transform="rotate(45 40 0)"/><rect x="-4" y="36" width="8" height="8" transform="rotate(45 0 40)"/><rect x="36" y="36" width="8" height="8" transform="rotate(45 40 40)"/></g>`},
+  ghana:{name:"Kente (woven strips)", w:48,h:48, svg:c=>`<rect width="48" height="48" fill="#f2c230" fill-opacity=".16"/><rect width="24" height="24" fill="#1f8a4c" fill-opacity=".4"/><rect x="24" y="24" width="24" height="24" fill="#1f8a4c" fill-opacity=".4"/><g fill="#d8394a" fill-opacity=".5"><rect x="24" y="3" width="24" height="2"/><rect x="24" y="9" width="24" height="2"/><rect x="24" y="15" width="24" height="2"/><rect x="24" y="21" width="24" height="2"/></g><g fill="#0a0a0a" fill-opacity=".45"><rect x="3" y="24" width="2" height="24"/><rect x="9" y="24" width="2" height="24"/><rect x="15" y="24" width="2" height="24"/><rect x="21" y="24" width="2" height="24"/></g><rect x="0" y="11" width="24" height="2" fill="${c}" fill-opacity=".6"/><rect x="35" y="24" width="2" height="24" fill="${c}" fill-opacity=".6"/>`},
+  peru:{name:"Andean textile (stepped diamonds)", w:32,h:32, svg:c=>`<path d="M0 24 h5 v-5 h5 v-5 h5 v-5 h2 v5 h5 v5 h5 v5 h5" fill="none" stroke="${c}" stroke-opacity=".6" stroke-width="2"/><path d="M16 22 l4 4 -4 4 -4 -4z" fill="#ffd23d" fill-opacity=".5"/><path d="M0 4 h32" stroke="#ff6ad5" stroke-opacity=".35" stroke-width="2" stroke-dasharray="4 4"/>`},
+  mexico:{name:"Papel picado (cut-paper flags)", w:120,h:32, rep:"repeat-x", pos:"0 100%", svg:c=>{const fl=(x,col)=>`<path d="M${x+2} 3 h36 v20 q-3 5 -6 0 q-3 5 -6 0 q-3 5 -6 0 q-3 5 -6 0 q-3 5 -6 0 q-3 5 -6 0 z" fill="${col}" fill-opacity=".6"/><circle cx="${x+20}" cy="12" r="4" fill="#0f1734"/><path d="M${x+9} 9 l3 3 -3 3 -3 -3z M${x+31} 9 l3 3 -3 3 -3 -3z" fill="#0f1734"/>`;
+    return `<path d="M0 3 H120" stroke="#eef1ff" stroke-opacity=".5"/>`+fl(0,c)+fl(40,"#53e3ff")+fl(80,"#ffd23d");}},
+  italy:{name:"Roman arcade (arches)", w:36,h:46, rep:"repeat-x", pos:"0 100%", svg:c=>`<g fill="none" stroke="${c}" stroke-opacity=".55" stroke-width="1.5"><path d="M4 46 V22 A14 14 0 0 1 32 22 V46"/><path d="M9 46 V23 A9 9 0 0 1 27 23 V46" stroke-opacity=".3"/><path d="M0 7 H36 M0 11 H36" stroke-opacity=".4"/></g>`},
+  aotearoa:{name:"Koru (unfurling fern)", w:64,h:64, svg:c=>`<path d="${KORU}" fill="none" stroke="${c}" stroke-opacity=".6" stroke-width="2.2" stroke-linecap="round"/><circle cx="34" cy="26" r="1.8" fill="${c}" fill-opacity=".7"/>`},
+  southafrica:{name:"Ndebele (geometric painting)", w:60,h:44, svg:c=>`<g stroke="#eef1ff" stroke-opacity=".38" stroke-width="2"><rect x="2" y="4" width="14" height="36" fill="${c}" fill-opacity=".35"/><rect x="20" y="4" width="20" height="16" fill="#ffd23d" fill-opacity=".32"/><rect x="20" y="24" width="20" height="16" fill="#3d7bff" fill-opacity=".35"/><rect x="44" y="4" width="14" height="36" fill="#eef1ff" fill-opacity=".08"/><path d="M44 40 L51 26 L58 40 M44 4 L51 18 L58 4" fill="none"/></g>`}
+};
+const motif=d=>MOTIFS[d.id];
+function motifStyle(d){const m=motif(d); return `--dc:${d.color};--motif:${svgTile(m.w,m.h,m.svg(d.color))};--msize:${m.w}px ${m.h}px;--mrep:${m.rep||"repeat"};--mpos:${m.pos||"100% 0"}`;}
+
+let ORDER=null;
+const order=()=>ORDER||(ORDER=shuffle(DESTS.map(d=>d.id)));
+function ticker(){
+  const nx=order().find(id=>!S.done[id]);
+  const items=order().map(dest).map(d=>{const i=DESTS.indexOf(d), dn=S.done[d.id], st=dn?"Landed":d.id===nx?"Now boarding":"On time";
+    return `<span><b>WP ${101+i}</b> ${esc(d.city.toUpperCase())} <i class="${dn?"ok":d.id===nx?"nb":""}">${st.toUpperCase()}</i></span>`;}).join("");
+  return `<div class="ticker" aria-hidden="true"><div class="track">${items}${items}</div></div>`;
+}
+const STREAK_BONUS=20;
+function answered(ok){
+  S.asked=(S.asked||0)+1;
+  if(ok){S.right=(S.right||0)+1; S.streak=(S.streak||0)+1; S.best=Math.max(S.best||0,S.streak);
+    if(S.streak>=3){S.bonus=(S.bonus||0)+STREAK_BONUS; sfx("streak"); toast(`Tailwind streak ×${S.streak}`,`+${STREAK_BONUS} bonus`);} else sfx("right");}
+  else {S.streak=0; sfx("wrong");}
+}
+/* keyboard: 1–4 or A–D to answer, Enter to continue */
+document.addEventListener("keydown",e=>{
+  if(e.target.closest && e.target.closest("button,input,textarea,select,a")) return;
+  if(document.querySelector(".overlay,.boarding")) return;
+  const k=e.key.toLowerCase(), idx="1234".indexOf(k)>=0?"1234".indexOf(k):"abcd".indexOf(k);
+  if(k.length===1 && idx>=0){const o=[...document.querySelectorAll("#app .opt")][idx]; if(o&&!o.disabled){e.preventDefault(); o.click();}}
+  else if(e.key==="Enter"){const n=document.getElementById("next"); if(n&&!n.disabled){e.preventDefault(); n.click();}}
+});
+function pace(){
+  const m=Math.floor((Date.now()-S.started)/60000), n=Object.keys(S.done).length;
+  if(n===DESTS.length) return `All ${n} stops done in ${m} min. Border control is open.`;
+  return `${m} min in the air · ${n} of ${DESTS.length} stops · aim for about 3½ min per stop`+(m>Math.round(n*3.5)+5?" · pick up the pace!":"");
+}
+
+/* ---------------- PRE-FLIGHT BRIEFING ---------------- */
+const ELEMENTS=[
+  ["Language","How people speak and write, including greetings and everyday sayings."],
+  ["Customs","Manners and etiquette: how people greet, eat, visit, and show respect."],
+  ["Food","What people eat, how they cook it, and how meals are shared."],
+  ["Beliefs","Religion and values: what people believe is true, good, and important."],
+  ["Arts","Music, dance, clothing, crafts, stories, and buildings."],
+  ["Celebrations","Holidays, festivals, and milestones like birthdays and weddings."]];
+const BRIEF_Q=[["The way a family greets its guests",true],["The height of a mountain",false],["The temperature outside today",false],["The number of bones in the human body",false]];
+function viewBrief(){
+  if(!S.brief) S.brief={opts:shuffle(BRIEF_Q.map(x=>({t:x[0],ok:x[1]}))), ans:null};
+  const B=S.brief, ans=B.ans, ok=ans!==null&&B.opts[ans].ok;
+  $app.innerHTML = bar()+`<div class="doc"><div class="doc-head"><div><div class="label">Before departure · Gate G0</div><h2>${flap("Pre-flight briefing")}</h2></div></div>
+    <p class="lead"><b>Culture</b> is the shared way of life of a group of people: what they believe, how they act, and what they make. At every stop you will explore these six parts of culture.</p>
+    <div class="elements">${ELEMENTS.map(e=>`<div class="el"><h3>${e[0]}</h3><p>${e[1]}</p></div>`).join("")}</div>
+    <div class="code"><div class="label">Traveler’s code</div><ul>
+      <li><b>Be curious and respectful.</b> Ask why people do something before deciding what you think about it.</li>
+      <li><b>People are individuals.</b> Not everyone in a country follows every custom in these notes, so avoid stereotypes.</li>
+      <li><b>Look for connections.</b> Notice what is similar to your own culture, not only what is different.</li></ul></div>
+    <div class="q"><div class="label qtag">Boarding check</div><div class="prompt">Which of these is an example of culture?</div>
+      <div class="opts">${B.opts.map((o,i)=>{let c=""; if(ans!==null){if(o.ok)c="right"; else if(i===ans)c="wrong";}
+        return `<button class="opt ${c}" data-i="${i}" ${ans!==null?"disabled":""}><span class="k">${"ABCD"[i]}</span><span>${esc(o.t)}</span></button>`;}).join("")}</div>
+      ${ans!==null?`<div class="why ${ok?"ok":"no"}"><b>${ok?"Cleared for boarding":"Not quite"}</b><br>Greeting guests is a custom that a group of people learns and shares, so it is part of culture. Mountains, weather, and bones are facts of nature, not culture.</div>
+        <div class="row"><button class="btn" id="next">${ok?"Head to departures":"Try again"}</button></div>`
+        :`<div class="counter">Tip: answer with keys 1–4, then press Enter to continue.</div>`}</div></div>`;
+  $app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{if(B.ans!==null)return; B.ans=+b.dataset.i; sfx(B.opts[B.ans].ok?"right":"wrong"); save(); render();});
+  const n=document.getElementById("next");
+  if(n) n.onclick=()=>{ if(ok){S.view="map"; S.brief=null;} else B.ans=null; save(); render(); window.scrollTo(0,0); };
+}
+
+/* ---------------- BORDER CONTROL: compare questions ---------------- */
+const COMPARE=[
+ {q:"Which two cultures from your trip have a traditional greeting that is not a handshake?", o:["Japan (bowing) and the Māori (the hongi)","Italy and Mexico","Ghana and Peru","Morocco and Italy"], why:"Japanese people bow, and the Māori hongi presses noses and foreheads together. The other places commonly use handshakes."},
+ {q:"In which two places is eating with the right hand a tradition?", o:["India and Ghana","Japan and Italy","Mexico and Aotearoa New Zealand","Peru and Japan"], why:"In India, roti is used to scoop food with the right hand. In Ghana, fufu is eaten with the right hand."},
+ {q:"Which two celebrations are tied to the sky?", o:["Inti Raymi and Matariki","Diwali and Holi","Carnevale and Día de Muertos","Homowo and Hanami"], why:"Inti Raymi honors the sun at the June solstice, and Matariki begins when a star cluster rises."},
+ {q:"Which celebration is mainly about remembering loved ones who have died?", o:["Día de Muertos","Holi","Hanami","Carnevale"], why:"Families build ofrendas with photos, favorite foods, and marigolds to remember those who have died."},
+ {q:"Morocco welcomes guests with mint tea. Which custom from another stop is also a way of welcoming visitors?", o:["The pōwhiri at a Māori marae","The passeggiata in Italy","Hanami in Japan","The quinceañera in Mexico"], why:"In a pōwhiri, the hosts welcome visitors onto the marae with speeches and songs."},
+ {q:"Respect for elders came up at many stops. Which of these would NOT show respect to an elder?", o:["Calling a Mexican grandmother “tú” like a friend","Bowing lower to an elder in Japan","Touching an elder’s feet in India","Greeting the elders first in Ghana"], why:"In Mexico, “usted” is the respectful form for elders. The other three are all ways of honoring elders."},
+ {q:"Which pair are both Indigenous languages still spoken by many people today?", o:["Quechua and te reo Māori","Italian and Spanish","Arabic and French","Hindi and English"], why:"Quechua was the language of the Inca, and te reo Māori is an official language of New Zealand."},
+ {q:"Why does a good traveler learn about customs before visiting a new place?", o:["To show respect and avoid offending the people they meet","Because everyone in a country acts exactly the same","To prove their own culture is the best","So they never have to talk to local people"], why:"Learning customs honors your hosts. Remember the traveler’s code: people are individuals, so customs are a guide, not a rule for everyone."},
+ {q:"Ubuntu from South Africa and Sankofa from Ghana are both…", o:["African ideas that teach a lesson about how to live","Kinds of food","Musical instruments","National holidays"], why:"Ubuntu teaches “I am because we are,” and Sankofa teaches us to learn from the past."}
+];
+
+/* ---------------- CLOCK + BOOT ---------------- */
+setInterval(()=>{const c=document.getElementById("clock"); if(c&&S.started) c.textContent=fmt(Date.now()-S.started);},1000);
+function sky(){
+  const cv=document.createElement("canvas"); cv.id="sky"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
+  const ctx=cv.getContext("2d"), reduce=matchMedia("(prefers-reduced-motion: reduce)").matches; let W=0,H=0,last=0,shoot=null;
+  const fit=()=>{const dpr=Math.min(2,window.devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);};
+  fit(); addEventListener("resize",()=>{fit(); if(reduce) draw(0);});
+  const stars=Array.from({length:180},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.2+.2,p:Math.random()*6.28,s:.4+Math.random()*1.4}));
+  function draw(now){
+    ctx.clearRect(0,0,W,H);
+    for(const st of stars){const al=.2+.6*(.5+.5*Math.sin(st.p+now/1000*st.s)); ctx.fillStyle=`rgba(220,228,255,${al.toFixed(2)})`; ctx.beginPath(); ctx.arc(st.x*W,st.y*H,st.r,0,7); ctx.fill();}
+    if(reduce) return;
+    if(!shoot && Math.random()<.005) shoot={x:Math.random()*W*.7,y:Math.random()*H*.4,t:now};
+    if(shoot){const k=(now-shoot.t)/900; if(k>1) shoot=null; else {const x=shoot.x+k*280, y=shoot.y+k*120, g=ctx.createLinearGradient(x-100,y-43,x,y);
+      g.addColorStop(0,"rgba(255,255,255,0)"); g.addColorStop(1,`rgba(255,255,255,${(.85*(1-k)).toFixed(2)})`); ctx.strokeStyle=g; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(x-100,y-43); ctx.lineTo(x,y); ctx.stroke();}}
+  }
+  function loop(now){ if(now-last>33){draw(now); last=now;} requestAnimationFrame(loop); }
+  if(reduce) draw(0); else requestAnimationFrame(loop);
+}
+sky();
+window.claude?.hot?.snapshot?.(()=>S);
+function start(data){ const x=(data&&data.view)?data:load(); if(x) S=Object.assign(freshState(), x); render(); }
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
